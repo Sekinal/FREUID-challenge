@@ -1,0 +1,119 @@
+{
+  "extracted_root": "/root/FREUID-challenge/data/extracted",
+  "total_files": 15,
+  "total_bytes": 3343979,
+  "total_human": "3.2 MB",
+  "by_extension": {
+    ".jpeg": {
+      "count": 13,
+      "bytes": 3342095,
+      "human": "3.2 MB"
+    },
+    ".csv": {
+      "count": 2,
+      "bytes": 1884,
+      "human": "1.8 KB"
+    }
+  },
+  "n_images_indexed": 13,
+  "csvs": {
+    "sample_submission.csv": {
+      "rows": 13,
+      "columns": [
+        "id",
+        "label"
+      ],
+      "dtypes": {
+        "id": "str",
+        "label": "float64"
+      },
+      "n_unique": {
+        "id": 13,
+        "label": 12
+      },
+      "head": [
+        {
+          "id": "3f49e6921f3f4b10910738f7e9b476f3",
+          "label": 0.1
+        },
+        {
+          "id": "c39d1c24d46a44a088991ddc7a072b7c",
+          "label": 0.2
+        },
+        {
+          "id": "3faa6e5db04448dea226f1e59e43c2c5",
+          "label": 0.6
+        },
+        {
+          "id": "6a18104fa24544278cf847865c880663",
+          "label": 0.4
+        },
+        {
+          "id": "d446ca58e43f44ec8595895959ef1916",
+          "label": 0.11
+        }
+      ]
+    },
+    "train_sample_labels.csv": {
+      "rows": 13,
+      "columns": [
+        "id",
+        "image_path",
+        "label",
+        "is_digital",
+        "type"
+      ],
+      "dtypes": {
+        "id": "str",
+        "image_path": "str",
+        "label": "int64",
+        "is_digital": "bool",
+        "type": "str"
+      },
+      "n_unique": {
+        "id": 13,
+        "image_path": 13,
+        "label": 2,
+        "is_digital": 2,
+        "type": 5
+      },
+      "head": [
+        {
+          "id": "3f49e6921f3f4b10910738f7e9b476f3",
+          "image_path": "train_sample/3f49e6921f3f4b10910738f7e9b476f3.jpeg",
+          "label": 0,
+          "is_digital": false,
+          "type": "BENIN/DL"
+        },
+        {
+          "id": "c39d1c24d46a44a088991ddc7a072b7c",
+          "image_path": "train_sample/c39d1c24d46a44a088991ddc7a072b7c.jpeg",
+          "label": 0,
+          "is_digital": true,
+          "type": "BENIN/DL"
+        },
+        {
+          "id": "3faa6e5db04448dea226f1e59e43c2c5",
+          "image_path": "train_sample/3faa6e5db04448dea226f1e59e43c2c5.jpeg",
+          "label": 1,
+          "is_digital": false,
+          "type": "MAURITIUS/ID"
+        },
+        {
+          "id": "6a18104fa24544278cf847865c880663",
+          "image_path": "train_sample/6a18104fa24544278cf847865c880663.jpeg",
+          "label": 0,
+          "is_digital": true,
+          "type": "MOZAMBIQUE/DL"
+        },
+        {
+          "id": "d446ca58e43f44ec8595895959ef1916",
+          "image_path": "train_sample/d446ca58e43f44ec8595895959ef1916.jpeg",
+          "label": 0,
+          "is_digital": false,
+          "type": "MOZAMBIQUE/DL"
+        }
+      ]
+    }
+  }
+}
