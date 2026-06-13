@@ -12,8 +12,9 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 - Our training data is **99.97% digital** (`is_digital=True` for all but 20 of 69,352).
   The private set emphasizes *captured* images → a large **digital→captured domain shift**
   stacked on top of the unseen-type shift.
-- A vanilla EfficientNet-b2 gets **FREUID ≈ 0.0001 in-distribution** (near-perfect) but the
-  public LB of an earlier (type-holdout) model was **0.333** — the gap is the whole game.
+- A vanilla EfficientNet-b2 gets **FREUID ≈ 0.0001 in-distribution** (near-perfect) but only
+  **0.291 on the public LB** (same 5 types, held-out, even *with* ~19% leaked twins) — a ~0.29
+  gap that is the whole game (the digital→captured shift, confirmed by a real submission).
 - Validation is now **leakage-safe** (group-stratified by near-duplicate component) and the
   FREUID metric is **vectorized (~1130× faster, bit-identical)**.
 
@@ -29,7 +30,8 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 | Train↔public_test near-dup leaks | ~1,505 (~19% of public test) |
 | Split groups | 64,135 (all partitions fraud-rate 0.423) |
 | Baseline in-dist val/test FREUID | ~0.0001 |
-| Earlier model public LB | 0.333 |
+| Baseline **public LB** (same types, held-out) | **0.291** |
+| → in-dist vs public gap | ~0.29 (the digital→captured shift, made real) |
 
 ## Documents
 

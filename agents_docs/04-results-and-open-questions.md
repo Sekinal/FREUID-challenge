@@ -20,12 +20,20 @@
 
 | Submission | Model | publicScore (lower=better) |
 |---|---|---|
-| 53623661 | earlier type-holdout b2 (epoch2) | **0.333** |
-| 53627140 | leakage-safe b2 (3 epoch) | pending at last check |
+| 53623661 | earlier type-holdout b2 (epoch2) | 0.333 |
+| 53627140 | leakage-safe b2 (3 epoch) | **0.291** |
 
-- The earlier model (trained with types effectively held out) scored 0.333 on public —
-  close to its *cross-type* local number (0.405), far from its optimistic val (0.017).
-  This is the in-dist→OOD gap in miniature.
+- **The headline calibration:** our leakage-safe b2 scores **local in-distribution FREUID
+  ≈ 0.0001** but **public LB 0.291**. The public test is the *same 5 types*, held-out images —
+  yet performance collapses ~0.29, and that's *with* ~19% leaked train-twins helping it.
+- **Most likely cause: the digital→captured shift.** Our local val is held-out-but-digital
+  (easy); the public/private tests lean captured/print-and-capture (hard). This proves the
+  in-distribution CV (0.0001) massively overstates reality.
+- The earlier type-holdout model scored 0.333; our all-types model beats it (0.291) only
+  because public_test types are all seen in training — that gain will NOT transfer to the
+  private set's 2 unseen types.
+- ⇒ Expect the private set (unseen types + *more* captured) to be **harder than 0.291**.
+  Optimize capture-robustness + LOTO, not the public LB.
 - Public LB is scored only on the 7,821 public_test ids (private dummies ignored).
 
 ## Leave-one-type-out (LOTO)
