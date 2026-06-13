@@ -5,18 +5,18 @@ End-to-end pipeline for the
 **next-generation identity-document fraud detection** across physical manipulations,
 GenAI-driven multimodal edits, and print-and-capture forgeries.
 
-The repo covers **EDA → group-aware validation → a trainable baseline → Kaggle
+The repo covers **EDA → leakage-safe validation → a trainable baseline → Kaggle
 submission**. It is schema-introspecting and **scales automatically** from the tiny
-public sample to the full release (this box has the full data).
+public sample to the full release (the GPU box has the full data).
 
 ## The task
 
 - **Goal:** predict `P(fraud)` per image `id`. `sample_submission.csv` is `id,label`
   with `label` a probability in `[0, 1]`.
 - **Metric:** FREUID — the harmonic combination of `AuDET` (area under the DET curve)
-  and `APCER@1%BPCER`; **lower is better**. Implemented in `freuid/metrics.py`.
+  and `APCER@1%BPCER`; **lower is better**. Implemented + tested in `freuid/metrics.py`.
 - **Labels** (`train_labels.csv`): `id, image_path, label (0=genuine/1=fraud),
-  is_digital (bool), type ("<COUNTRY>/<DOC_TYPE>")`, e.g. `MAURITIUS/ID`, `GUINEA/DL`.
+  is_digital (bool), type ("<COUNTRY>/<DOC_TYPE>")`.
 
 ## Dataset scale (full release, on the GPU box)
 
@@ -26,43 +26,45 @@ public sample to the full release (this box has the full data).
 | `public_test/` | 7,821 (~1.7 GB) | scored for submission |
 | `train_sample/` | 13 | the original public demo sample |
 
-`data/` and `embeddings/` are git-ignored and live only on the box.
+**Composition:** 5 document types — EGYPT/DL, GUINEA/DL, BENIN/DL, MOZAMBIQUE/DL,
+MAURITIUS/ID (each ~13–16k images); fraud rate ≈ 0.42 (EGYPT/DL ≈ 0.50);
+`is_digital` is True for all but 20 images. `data/` and `embeddings/` are git-ignored.
 
-## Key EDA findings (public sample)
+## Leakage-safe validation (the core of this repo)
 
-| Finding | Detail |
-|---|---|
-| Class balance | 3 fraud / 10 genuine (23% fraud) |
-| Strata | 5 countries (BENIN, EGYPT, GUINEA, MAURITIUS, MOZAMBIQUE); doc types DL / ID; `is_digital` split |
-| Integrity | 13/13 JPEG, RGB, 0 corrupt; ~840–1585 px wide, aspect ≈ 1.58 |
-| **Near-duplicates** | **5 near-dup pairs (pHash ≤ 8), 3 with conflicting labels** → matched genuine↔tampered pairs / shared templates. **Group them into the same CV fold or folds leak.** |
-| Embedding structure | CLIP ViT-B/32 features separate by `doc_type`/`country` but **not** by `label` → fraud cues are subtle, likely need forensic/high-res features |
+Naive validation is badly misleading here: there are only **5 document types**, so
+holding out whole types gives a handful of high-variance configurations, and the
+training set contains **near-duplicate twins** (a genuine document and its tampered
+copy, shared blank templates) that leak across folds. The pipeline addresses both:
 
-> The committed `artifacts/`, `figures/`, and `report/report.pdf` describe the **public
-> sample**; re-run scripts `01`–`08` on the box to regenerate them at full scale.
+- **Duplicate detection at scale** (`freuid/dedup.py`, `scripts/05`): 256-bit pHash
+  (a 64-bit hash is too coarse — distinct same-template docs collide even at distance 0),
+  with LSH banding (pigeonhole-complete; *fails closed* if a bucket is skipped) and
+  union-find components. On the full train set: **10,240 near-dup pairs / 1,124
+  components**, ~35% with conflicting labels (genuine↔tampered twins). It also flags
+  **~1,505 train↔public_test near-duplicate pairs** — direct test-time leakage to
+  exploit/account for.
+- **Group-stratified splits** (`freuid/splits.py`, `scripts/09`): every image is grouped
+  by its duplicate component, then `StratifiedGroupKFold` assigns **whole groups** to
+  train/val/test and CV folds, balancing the `type × label` distribution. Result:
+  **64,135 groups**, all three partitions at fraud rate **0.423**, CV fold fraud-rate
+  **std = 0.0001**, and a hard `assert_no_leakage` (no group or id crosses a boundary).
+- **Cross-type stress test** (leave-one-type-out) as a *secondary*, pessimistic signal
+  for the type-shift scenario — group-aware so cross-type twins never leak.
+- **Uncertainty + breakdowns** (`freuid/validation.py`, `freuid/metrics.bootstrap_metric`):
+  stratified bootstrap confidence intervals, per-type metrics, and group CV summaries —
+  because a single point estimate is not trustworthy on this data.
 
-Full write-up: **[`report/report.pdf`](report/report.pdf)**.
+## Baseline model
 
-## Modeling & validation
+`freuid/baseline.py` (+ `scripts/11`, `scripts/12`): pretrained timm `efficientnet_b2`
++ binary head, `pos_weight` for class imbalance. Best checkpoint is chosen by **AuDET**
+(smooth) rather than FREUID (which folds in a single near-threshold operating point and
+can swing to 1.0 between epochs).
 
-- **Group-aware splits** (`freuid/splits.py`, `scripts/09_build_splits.py`): hold out
-  whole document `type` groups (never random rows); union-find keeps near-duplicate ids
-  in the same partition; greedy stratified assignment by size + fraud rate; `GroupKFold`
-  on `type_component`. Outputs under `artifacts/splits/` (git-ignored — large &
-  regenerable).
-- **Metrics** (`freuid/metrics.py`): DET curve, AuDET, APCER@1%BPCER, EER, FREUID.
-  Covered by `tests/test_metrics.py`.
-- **Baseline** (`freuid/baseline.py`, `scripts/11_train_baseline.py`): pretrained timm
-  `efficientnet_b2` + binary head, AMP, `pos_weight` for class imbalance. Best checkpoint
-  is selected by **AuDET** (smooth) rather than FREUID (which folds in a single
-  near-threshold operating point and can swing to 1.0 between epochs). TF32 + cuDNN
-  autotuning are enabled for the A100.
-- **Predict** (`scripts/12_predict_baseline.py`): scores `public_test` → submission CSV.
-
-**Current baseline (efficientnet_b2, 3 epochs, full data):** val FREUID ≈ 0.017,
-**test FREUID ≈ 0.41**. The large val↔test gap is expected: there are only ~5 distinct
-`type` components, so holding out whole types makes the held-out metric high-variance.
-Next steps live in `docs/`.
+**Tuned to saturate the A100:** bf16 autocast (no GradScaler; fixes silent fp16
+underflow), `channels_last`, `torch.compile`, TF32 + cuDNN autotune, wide dataloader —
+~100% GPU utilization during training.
 
 ## Layout
 
@@ -71,49 +73,50 @@ freuid/            # package
   config.py        # paths/schema; auto-selects full vs sample data
   io.py            # schema-agnostic loaders + image discovery
   data.py          # PyTorch DocumentDataset + transforms
-  metrics.py       # FREUID metric bundle
-  splits.py        # group-aware train/val/test + CV folds
-  validation.py    # validation pipeline (holdout + group CV)
-  baseline.py      # timm baseline train / predict
-  viz.py           # plot style
-scripts/           # numbered, each runnable via `uv run`
-  00_download.py … 08_build_report.py   # EDA: download → inventory → report
-  09_build_splits.py        # group-aware splits + CV manifests
-  10_validate_smoke.py      # wiring smoke test (constant scorer)
-  11_train_baseline.py      # train the EfficientNet baseline
-  12_predict_baseline.py    # public_test -> submission CSV
-tests/             # pytest-style; also runnable as plain scripts
-artifacts/         # small JSON/parquet stats (committed); splits/ ignored
-figures/  report/  # PNGs + Typst report (public-sample)
-data/  embeddings/ runs/  submissions/   # git-ignored (live on the box)
+  metrics.py       # FREUID bundle + bootstrap CIs
+  dedup.py         # scalable exact/near-dup detection (256-bit pHash + LSH)
+  splits.py        # leakage-safe StratifiedGroupKFold + LOTO + assertions
+  validation.py    # holdout/CV/LOTO scoring, CIs, per-type, leakage checks
+  baseline.py      # A100-tuned timm baseline (train/predict)
+  viz.py
+scripts/           # numbered, runnable via `uv run` (or .venv/bin/python on the box)
+  00..08           # EDA: download → inventory → image stats → report
+  05_duplicates_leakage.py   # full-scale dup + train/test leakage detection
+  09_build_splits.py         # leakage-safe splits (--strategy stratified_group|type_holdout)
+  10_validate_smoke.py       # validation wiring smoke (no model)
+  11_train_baseline.py       # train baseline on the A100
+  12_predict_baseline.py     # public_test -> submission CSV
+tests/             # metrics, dedup (LSH completeness), splits (leakage-safety)
+artifacts/         # small JSON/parquet stats (committed); splits/ git-ignored
+data/ embeddings/ runs/ submissions/   # git-ignored (live on the box)
 ```
 
 ## Reproduce
 
-Prereqs: [`uv`](https://docs.astral.sh/uv/) (or the existing `.venv` on the box), and
-[`typst`](https://typst.app/) for the PDF. Kaggle auth via `~/.kaggle/access_token`
-or `KAGGLE_API_TOKEN`.
+Prereqs: [`uv`](https://docs.astral.sh/uv/) (or the box `.venv`) and
+[`typst`](https://typst.app/) for the PDF. Kaggle auth via `~/.kaggle/access_token`.
 
 ```bash
-uv sync                              # install deps (torch is CUDA cu12x)
-bash scripts/run_eda.sh              # EDA: 00 -> 08
-uv run python scripts/09_build_splits.py
-uv run python scripts/11_train_baseline.py        # full train (A100)
-uv run python scripts/11_train_baseline.py --max-train 2000   # quick smoke
+uv sync
+bash scripts/run_eda.sh                          # EDA 00..08
+uv run python scripts/05_duplicates_leakage.py   # full-scale dedup (artifacts/duplicates.json)
+uv run python scripts/09_build_splits.py         # leakage-safe splits
+uv run python scripts/10_validate_smoke.py       # validate the validator
+uv run python scripts/11_train_baseline.py --epochs 3 --batch-size 512   # A100
 uv run python scripts/12_predict_baseline.py --checkpoint runs/baseline/best.pt
-uv run python tests/test_metrics.py  # or: uv run python -m pytest tests/
+uv run python tests/test_metrics.py && uv run python tests/test_dedup.py && uv run python tests/test_splits.py
 ```
 
-On the box (no `uv`): swap `uv run python` for `.venv/bin/python`.
+On the box (no `uv`): use `.venv/bin/python` in place of `uv run python`.
 
 ## GPU server (team box)
 
-SSH: `ssh root@216.81.248.172 -p 40299` — repo and full dataset under
-`/root/freuid`. Full setup & coordination: **[`docs/SERVER.md`](docs/SERVER.md)**.
+SSH: `ssh root@216.81.248.172 -p 40299` — repo and full dataset under `/root/freuid`.
+Setup & coordination: **[`docs/SERVER.md`](docs/SERVER.md)**. The committed
+`artifacts/`/`figures/`/`report/` EDA snapshots describe the **public sample**; re-run
+`01`–`08` on the box to regenerate at full scale.
 
 ## Notes
 
-- Everything is schema-introspecting: `config.py` auto-picks `train_labels.csv` +
-  `train/train/` when present, else the sample. The same scripts run at either scale.
-- The Kaggle token lives only in `~/.kaggle/` on the box; `LOCAL_CREDENTIALS.txt` is
-  git-ignored and never committed.
+- `config.py` auto-picks `train_labels.csv` + `train/train/` when present, else the sample.
+- Kaggle token lives only in `~/.kaggle/` on the box; `LOCAL_CREDENTIALS.txt` is git-ignored.

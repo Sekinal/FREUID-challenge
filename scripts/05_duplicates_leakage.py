@@ -1,118 +1,136 @@
 #!/usr/bin/env python
-"""Exact + near-duplicate detection and a train/test leakage scaffold.
+"""Exact + near-duplicate detection at full-dataset scale (leakage units).
 
-- Exact duplicates via MD5 of file bytes.
-- Near-duplicates via perceptual hashes (pHash, dHash, aHash); pairs with
-  Hamming distance <= threshold are flagged. Conflicting labels on a duplicate
-  pair are highlighted (a real data-quality risk).
-- Leakage: if a separate test image directory ever ships, the same pHash index
-  is reused to find train<->test overlaps. With only the public sample present,
-  this is reported as "test set hidden".
-
-Writes ``artifacts/duplicates.json`` and a montage of the closest pairs.
+Scales to the full release (~70k images) via parallel hashing and LSH-banded
+near-duplicate candidate generation (see ``freuid.dedup``). Writes
+``artifacts/duplicates.json`` (consumed by ``freuid.splits`` to keep near-dups
+in the same partition) and a montage of the closest pairs. When ``public_test``
+images are present, also reports train<->test near-duplicate leakage.
 
     uv run scripts/05_duplicates_leakage.py
+    uv run scripts/05_duplicates_leakage.py --threshold 8 --workers 16 --limit 2000
 """
 from __future__ import annotations
 
-import hashlib
-import itertools
+import argparse
 import sys
-from collections import defaultdict
 from pathlib import Path
 
-import imagehash
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from freuid import config, io, viz  # noqa: E402
-
-PHASH_THRESHOLD = 8  # Hamming distance on a 64-bit pHash considered "near-dup"
+from freuid import config, dedup, io  # noqa: E402  (viz imported lazily for the montage)
 
 
-def md5(path: Path) -> str:
-    h = hashlib.md5()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def hashes(path: Path) -> dict:
-    im = Image.open(path).convert("RGB")
-    return {
-        "phash": imagehash.phash(im),
-        "dhash": imagehash.dhash(im),
-        "ahash": imagehash.average_hash(im),
-    }
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Full-scale duplicate / leakage detection.")
+    p.add_argument("--threshold", type=int, default=dedup.DEFAULT_THRESHOLD,
+                   help="Max pHash Hamming distance for a near-duplicate (256-bit).")
+    p.add_argument("--hash-size", type=int, default=dedup.HASH_SIZE,
+                   help="pHash side length; bits = hash_size**2 (16 -> 256-bit).")
+    p.add_argument("--workers", type=int, default=None, help="Hashing process pool size.")
+    p.add_argument("--limit", type=int, default=None, help="Cap #images (debug).")
+    p.add_argument("--draft", type=int, default=128, help="JPEG draft decode size.")
+    return p.parse_args()
 
 
 def main() -> None:
-    viz.set_style()
+    args = parse_args()
     labels = io.load_labels()
-    label_map = dict(zip(labels[config.ID_COL].astype(str), labels[config.LABEL_COL]))
+    label_map = {
+        str(k): int(v)
+        for k, v in zip(labels[config.ID_COL].astype(str), labels[config.LABEL_COL])
+        if v == v  # drop NaN
+    }
 
     paths = io.list_images()
     if not paths:
         sys.exit("No images found. Run scripts/00_download.py first.")
+    if args.limit:
+        paths = paths[: args.limit]
 
-    # exact duplicates
-    by_md5: dict[str, list[str]] = defaultdict(list)
-    h = {}
-    for p in paths:
-        by_md5[md5(p)].append(p.stem)
-        h[p.stem] = hashes(p)
-    exact_groups = [ids for ids in by_md5.values() if len(ids) > 1]
+    bits = args.hash_size * args.hash_size
+    print(f"[hash] {len(paths):,} images (workers={args.workers or 'auto'}, draft={args.draft}, "
+          f"hash_size={args.hash_size}/{bits}-bit, threshold={args.threshold})")
+    stems, md5_by, phash_by = dedup.compute_hashes(
+        paths, max_workers=args.workers, draft_size=args.draft, hash_size=args.hash_size)
+    print(f"[hash] done: {len(stems):,} hashed ({len(paths) - len(stems)} failed)")
 
-    # near duplicates (all pairs — fine for sample sizes; swap to BK-tree at scale)
-    ids = [p.stem for p in paths]
-    near = []
-    for a, b in itertools.combinations(ids, 2):
-        d = h[a]["phash"] - h[b]["phash"]
-        if d <= PHASH_THRESHOLD:
-            near.append({
-                "a": a, "b": b, "phash_dist": int(d),
-                "dhash_dist": int(h[a]["dhash"] - h[b]["dhash"]),
-                "label_a": label_map.get(a), "label_b": label_map.get(b),
-                "label_conflict": label_map.get(a) != label_map.get(b),
-            })
-    near.sort(key=lambda r: r["phash_dist"])
+    result = dedup.find_duplicates(
+        stems, md5_by, phash_by, threshold=args.threshold, label_map=label_map, bits=bits,
+    )
+    if result.incomplete:
+        sys.exit(
+            f"[FATAL] {result.skipped_buckets} LSH bucket(s) exceeded the hard cap; "
+            "the near-duplicate guarantee is voided and downstream splits could leak. "
+            "Re-run with a smaller --threshold or raise dedup.HARD_CAP after inspection."
+        )
+    payload = result.to_json(label_map=label_map)
 
-    result = {
-        "n_images": len(paths),
-        "phash_threshold": PHASH_THRESHOLD,
-        "n_exact_duplicate_groups": len(exact_groups),
-        "exact_duplicate_groups": exact_groups,
-        "n_near_duplicate_pairs": len(near),
-        "near_duplicate_pairs": near,
-        "n_label_conflicts": sum(r["label_conflict"] for r in near),
-        "leakage": {
-            "test_images_present": False,
-            "note": "Public release ships only train_sample; the hidden test set "
-                    "cannot be checked locally. Re-run when test images are available.",
-        },
-    }
-    out = io.save_json("duplicates.json", result)
+    # --- optional train <-> public_test leakage ---
+    test_root = config.PUBLIC_TEST_DIR
+    if test_root.exists():
+        test_paths = [p for p in test_root.rglob("*") if p.suffix.lower() in config.IMAGE_EXTENSIONS]
+        if args.limit:
+            test_paths = test_paths[: args.limit]
+        print(f"[leakage] hashing {len(test_paths):,} public_test images")
+        t_stems, _t_md5, t_phash = dedup.compute_hashes(
+            test_paths, max_workers=args.workers, draft_size=args.draft, hash_size=args.hash_size)
+        train_set = set(stems)
+        all_stems = list(stems) + [s for s in t_stems if s not in train_set]
+        merged_phash = dict(phash_by)
+        for s in t_stems:
+            merged_phash.setdefault(s, t_phash[s])
+        cross = dedup.find_duplicates(
+            all_stems, {s: "" for s in all_stems}, merged_phash, threshold=args.threshold, bits=bits)
+        is_test = set(t_stems)
+        leak_pairs = [
+            p for p in cross.near_duplicate_pairs
+            if (p["a"] in is_test) != (p["b"] in is_test)  # exactly one side is test
+        ]
+        payload["train_test_leakage"] = {
+            "n_public_test": len(t_stems),
+            "n_train_test_near_pairs": len(leak_pairs),
+            "examples": leak_pairs[:25],
+        }
+        print(f"[leakage] train<->public_test near-dup pairs: {len(leak_pairs):,}")
+    else:
+        payload["train_test_leakage"] = {"note": "public_test not present"}
 
-    # montage of the closest near-duplicate pairs
-    top = near[:6]
-    if top:
+    out = io.save_json("duplicates.json", payload)
+
+    # montage of the closest near-duplicate pairs (skipped if matplotlib absent)
+    top = result.near_duplicate_pairs[:6]
+    try:
+        from freuid import viz
+    except ModuleNotFoundError:
+        viz = None
+        print("[skip] montage: matplotlib not installed")
+    if top and viz is not None:
+        viz.set_style()
         idx = io.image_index()
         fig, axes = viz.plt.subplots(len(top), 2, figsize=(5, 2.4 * len(top)))
         axes = axes.reshape(len(top), 2)
         for row, pair in zip(axes, top):
             for ax, key in zip(row, ("a", "b")):
-                im = Image.open(idx[pair[key]]).convert("RGB")
-                im.thumbnail((220, 220))
-                ax.imshow(im)
+                stem = pair[key]
+                if stem in idx:
+                    im = Image.open(idx[stem]).convert("RGB")
+                    im.thumbnail((220, 220))
+                    ax.imshow(im)
                 ax.axis("off")
-                ax.set_title(f"{pair[key][:8]} (lab={pair['label_'+key]})", fontsize=7)
+                ax.set_title(f"{stem[:8]} (lab={pair.get('label_' + key)})", fontsize=7)
             row[0].set_ylabel(f"pHash={pair['phash_dist']}", fontsize=8)
         fig.suptitle("Closest near-duplicate pairs", fontweight="bold")
         viz.save_fig(fig, "duplicate_pairs.png")
 
-    print(f"images={len(paths)}  exact_groups={len(exact_groups)}  "
-          f"near_pairs={len(near)}  label_conflicts={result['n_label_conflicts']}")
+    print(
+        f"[done] images={result.n_images:,}  exact_groups={result.n_exact_duplicate_groups:,}  "
+        f"near_pairs={result.n_near_duplicate_pairs:,}  "
+        f"nontrivial_components={result.n_nontrivial_components:,}  "
+        f"largest={payload['largest_component']}  "
+        f"candidates={result.n_candidate_pairs:,}  skipped_buckets={result.skipped_buckets}"
+    )
     print(f"[done] -> {out}")
 
 

@@ -29,3 +29,9 @@ submissions/
 
 # ---- OS / editor ----
 .DS_Store
+
+# transient validation smoke output (random scorer)
+artifacts/validation_smoke.json
+
+# full near-dup pairs are large + regenerable (scripts/05); keep only the summary
+artifacts/duplicates.json

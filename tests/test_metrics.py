@@ -30,25 +30,20 @@ S_SEP = np.r_[_GEN, _ATK]
 def test_det_curve_is_sorted_and_bounded():
     bpcer, apcer, thr = metrics.det_curve(Y_SEP, S_SEP)
     assert bpcer.shape == apcer.shape == thr.shape
-    # sorted by ascending BPCER (the contract of det_curve)
     assert np.all(np.diff(bpcer) >= -1e-12)
-    # error rates live in [0, 1]
     assert bpcer.min() >= -1e-12 and bpcer.max() <= 1 + 1e-12
     assert apcer.min() >= -1e-12 and apcer.max() <= 1 + 1e-12
 
 
 def test_error_rates_endpoints():
-    # threshold above every score -> everything predicted genuine
     apcer, bpcer = metrics.error_rates(Y_SEP, S_SEP, threshold=2.0)
     assert apcer == 1.0 and bpcer == 0.0
-    # threshold below every score -> everything predicted fraud
     apcer, bpcer = metrics.error_rates(Y_SEP, S_SEP, threshold=-1.0)
     assert apcer == 0.0 and bpcer == 1.0
 
 
 def test_perfect_separation_is_near_optimal():
     r = metrics.freuid_score(Y_SEP, S_SEP)
-    # separable data -> tiny error area, zero APCER at 1% BPCER, FREUID ~ 0
     assert r.audet < 0.05
     assert r.apcer_at_1pct_bpcer < 1e-9
     assert r.freuid < 0.05
@@ -57,10 +52,10 @@ def test_perfect_separation_is_near_optimal():
 
 def test_inverted_scores_are_much_worse():
     good = metrics.freuid_score(Y_SEP, S_SEP)
-    bad = metrics.freuid_score(Y_SEP, 1.0 - S_SEP)  # rank attacks below genuine
+    bad = metrics.freuid_score(Y_SEP, 1.0 - S_SEP)
     assert bad.audet > good.audet
     assert bad.freuid > good.freuid
-    assert bad.freuid > 0.5  # a fully anti-correlated ranker is near worst-case
+    assert bad.freuid > 0.5
 
 
 def test_freuid_matches_harmonic_identity():
@@ -76,7 +71,6 @@ def test_freuid_matches_harmonic_identity():
 def test_apcer_at_bpcer_returns_threshold_meeting_budget():
     apcer, thr = metrics.apcer_at_bpcer(Y_SEP, S_SEP, target_bpcer=0.01)
     assert thr is not None
-    # the returned threshold must actually keep BPCER within budget here
     got_apcer, got_bpcer = metrics.error_rates(Y_SEP, S_SEP, thr)
     assert got_bpcer <= 0.01 + 1e-9
     assert abs(got_apcer - apcer) < 1e-9
@@ -85,11 +79,57 @@ def test_apcer_at_bpcer_returns_threshold_meeting_budget():
 def test_scores_are_floats_in_range():
     rng = np.random.default_rng(0)
     y = rng.integers(0, 2, size=200)
-    y[0], y[1] = 0, 1  # guarantee both classes present
+    y[0], y[1] = 0, 1
     s = rng.random(200)
     r = metrics.freuid_score(y, s)
     for v in (r.freuid, r.audet, r.apcer_at_1pct_bpcer):
         assert 0.0 <= v <= 1.0
+
+
+def test_bootstrap_metric_brackets_point_estimate():
+    r = metrics.bootstrap_metric(Y_SEP, S_SEP, n_boot=100, seed=0)
+    fr = r["freuid"]
+    assert fr["lo"] <= fr["point"] + 1e-9
+    assert fr["point"] - 1e-9 <= fr["hi"]
+    assert r["n_boot"] == 100
+
+
+# --------------------------------------------------------------------------
+# Vectorised det_curve must stay bit-identical to the naive per-threshold loop.
+# --------------------------------------------------------------------------
+def _ref_det_curve(y_true, y_score):
+    y = np.asarray(y_true, dtype=np.int8)
+    s = np.asarray(y_score, dtype=np.float64)
+    thresholds = np.unique(s)
+    thresholds = np.concatenate(([1.0 + 1e-12], thresholds, [-1e-12]))
+    bl, al = [], []
+    for t in thresholds:
+        pred = s >= float(t)
+        att = y == 1
+        gen = y == 0
+        al.append(float(np.mean(~pred[att])) if att.any() else 0.0)
+        bl.append(float(np.mean(pred[gen])) if gen.any() else 0.0)
+    order = np.argsort(bl)
+    return np.asarray(bl)[order], np.asarray(al)[order], thresholds[order]
+
+
+def test_det_curve_matches_reference_loop_exactly():
+    rng = np.random.default_rng(123)
+    for kind in ("uniform", "ties", "binary"):
+        for n in (6, 50, 777):
+            y = rng.integers(0, 2, size=n)
+            y[0], y[1] = 0, 1
+            if kind == "uniform":
+                s = rng.random(n)
+            elif kind == "ties":
+                s = rng.integers(0, 5, size=n) / 4.0
+            else:
+                s = rng.integers(0, 2, size=n).astype(float)
+            rb, ra, rt = _ref_det_curve(y, s)
+            vb, va, vt = metrics.det_curve(y, s)
+            assert np.array_equal(rb, vb), f"bpcer differs ({kind}, n={n})"
+            assert np.array_equal(ra, va), f"apcer differs ({kind}, n={n})"
+            assert np.array_equal(rt, vt), f"thresholds differ ({kind}, n={n})"
 
 
 def _main() -> int:

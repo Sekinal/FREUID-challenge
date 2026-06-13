@@ -1,17 +1,21 @@
 #!/usr/bin/env python
-"""Build group-aware train / val / test splits and CV fold manifests.
+"""Build leakage-safe train / val / test splits and CV fold assignments.
 
-Split policy:
-  - Hold out whole document ``type`` groups (country/doc-type), never random rows.
-  - Merge types linked by near-duplicate pairs (``artifacts/duplicates.json``).
-  - Greedy stratified assignment by size + fraud rate.
-  - GroupKFold CV on train+val using the same type components.
+Strategy (default ``stratified_group``):
+  - Group every image by its connected component in the exact+near duplicate
+    graph (``artifacts/duplicates.json`` from scripts/05) so near-dups never
+    cross a partition.
+  - Assign whole groups to train/val/test and CV folds with StratifiedGroupKFold,
+    balancing the ``type x label`` distribution.
+  - Also emit leave-one-type-out (LOTO) metadata for a cross-type stress test.
 
-Outputs under ``artifacts/splits/``:
-  - labeled_with_split.csv, train.csv, val.csv, test.csv
-  - manifest.json, cv_fold_*.json
+Legacy ``--strategy type_holdout`` reproduces the old whole-type holdout.
+
+Outputs under ``artifacts/splits/``: labeled_with_split.csv, {train,val,test}.csv,
+manifest.json. Folds live in the ``cv_fold`` column (no giant id-list JSONs).
 
     uv run scripts/09_build_splits.py
+    uv run scripts/09_build_splits.py --strategy type_holdout
     uv run scripts/09_build_splits.py --val-frac 0.15 --test-frac 0.15 --folds 5
 """
 from __future__ import annotations
@@ -25,10 +29,13 @@ from freuid import config, io, splits, validation  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Build FREUID train/val/test splits.")
-    p.add_argument("--val-frac", type=float, default=0.15, help="Fraction of type components for val.")
-    p.add_argument("--test-frac", type=float, default=0.15, help="Fraction of type components for test.")
-    p.add_argument("--folds", type=int, default=5, help="GroupKFold folds on train+val.")
+    p = argparse.ArgumentParser(description="Build FREUID leakage-safe splits.")
+    p.add_argument("--strategy", choices=("stratified_group", "type_holdout"), default="stratified_group")
+    p.add_argument("--val-frac", type=float, default=0.15)
+    p.add_argument("--test-frac", type=float, default=0.15)
+    p.add_argument("--folds", type=int, default=5)
+    p.add_argument("--threshold", type=int, default=10, help="pHash near-dup threshold (metadata).")
+    p.add_argument("--no-type-stratify", action="store_true", help="Stratify on label only.")
     p.add_argument("--seed", type=int, default=42)
     return p.parse_args()
 
@@ -36,9 +43,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     cfg = splits.SplitConfig(
+        strategy=args.strategy,
         val_type_fraction=args.val_frac,
         test_type_fraction=args.test_frac,
         n_cv_folds=args.folds,
+        near_dup_threshold=args.threshold,
+        stratify_on_type=not args.no_type_stratify,
         random_state=args.seed,
     )
 
@@ -46,7 +56,7 @@ def main() -> None:
     if labels.empty:
         sys.exit("No labels found. Run scripts/00_download.py first.")
 
-    print(f"[info] labels: {config.LABELS_CSV.name} ({len(labels):,} rows)")
+    print(f"[info] labels: {config.LABELS_CSV.name} ({len(labels):,} rows)  strategy={cfg.strategy}")
     print(f"[info] images dir: {config.IMAGES_DIR}")
     if "path_exists" in labels.columns:
         missing = int((~labels["path_exists"]).sum())
@@ -60,24 +70,31 @@ def main() -> None:
     io.save_json("split_sanity.json", sanity)
 
     print(f"[done] splits -> {out_dir}")
+    print(f"  groups: {manifest.n_groups:,} ({manifest.n_nontrivial_groups:,} non-trivial / merged)")
     for split_name in config.SPLIT_NAMES:
-        stats = manifest.split_stats[split_name]
+        s = manifest.split_stats[split_name]
+        rate = s["fraud_rate"]
         print(
-            f"  {split_name:5s}: n={stats['n']:6,d}  "
-            f"fraud={stats['n_fraud']:5,d}  "
-            f"rate={stats['fraud_rate']:.3f}  "
-            f"types={stats['n_types']:3d}  groups={stats['n_groups']:5,d}"
+            f"  {split_name:5s}: n={s['n']:7,d}  fraud={s['n_fraud']:6,d}  "
+            f"rate={rate:.3f}  types={s['n_types']:2d}  groups={s['n_groups']:7,d}"
         )
     print(f"  cv folds: {len(manifest.cv_folds)}")
-    if manifest.warnings:
-        for w in manifest.warnings:
-            print(f"  [warn] {w}")
+    if "cv_fraud_rate_spread" in sanity:
+        sp = sanity["cv_fraud_rate_spread"]
+        print(f"  cv fraud-rate balance: [{sp['min']:.3f}, {sp['max']:.3f}] std={sp['std']:.4f}")
+    if manifest.type_holdout_folds:
+        loto = ", ".join(f"{f['type']}({f['val_fraud_rate']:.2f})" for f in manifest.type_holdout_folds)
+        print(f"  LOTO types: {loto}")
+
+    for w in manifest.warnings:
+        print(f"  [warn] {w}")
     if sanity["duplicate_leakage_count"]:
         print(f"  [warn] duplicate leakage pairs: {sanity['duplicate_leakage_count']}")
-    overlap = sanity["type_overlap"]
-    for key, items in overlap.items():
+    else:
+        print("  [ok] no duplicate-pair leakage across splits")
+    for key, items in sanity["type_overlap"].items():
         if items:
-            print(f"  [warn] type overlap {key}: {len(items)} types")
+            print(f"  [info] type overlap {key}: {len(items)} types (expected for stratified_group)")
 
 
 if __name__ == "__main__":

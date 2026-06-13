@@ -26,9 +26,13 @@ class BaselineConfig:
     epochs: int = 3
     lr: float = 2e-4
     weight_decay: float = 1e-4
-    num_workers: int = 8
+    num_workers: int = 12
     seed: int = 42
     amp: bool = True
+    amp_dtype: str = "bf16"        # "bf16" (A100-native, no GradScaler) or "fp16"
+    channels_last: bool = True     # NHWC: faster convs under AMP on Ampere+
+    compile: bool = True           # torch.compile fuses kernels (falls back on error)
+    prefetch_factor: int = 4
     max_train_samples: int | None = None
 
 
@@ -55,6 +59,17 @@ def configure_backends(device: torch.device) -> None:
             pass
 
 
+def _amp_dtype(cfg: "BaselineConfig") -> "torch.dtype":
+    return torch.bfloat16 if cfg.amp_dtype == "bf16" else torch.float16
+
+
+def _to_device(images: "torch.Tensor", device: torch.device, cfg: "BaselineConfig") -> "torch.Tensor":
+    images = images.to(device, non_blocking=True)
+    if cfg.channels_last and device.type == "cuda":
+        images = images.contiguous(memory_format=torch.channels_last)
+    return images
+
+
 def build_model(model_name: str, pretrained: bool = True) -> nn.Module:
     return timm.create_model(model_name, pretrained=pretrained, num_classes=1)
 
@@ -78,7 +93,7 @@ def _make_loader(frame: pd.DataFrame, cfg: BaselineConfig, train: bool) -> DataL
         pin_memory=torch.cuda.is_available(),
         drop_last=train and len(ds) > cfg.batch_size,
         persistent_workers=cfg.num_workers > 0,
-        prefetch_factor=2 if cfg.num_workers > 0 else None,
+        prefetch_factor=cfg.prefetch_factor if cfg.num_workers > 0 else None,
     )
 
 
@@ -98,11 +113,11 @@ def predict_frame(
             images, _, batch_ids = batch
         else:
             images, batch_ids = batch
-        images = images.to(device, non_blocking=True)
-        with torch.autocast(device_type=device.type, enabled=cfg.amp and device.type == "cuda"):
+        images = _to_device(images, device, cfg)
+        with torch.autocast(device_type=device.type, dtype=_amp_dtype(cfg), enabled=cfg.amp and device.type == "cuda"):
             logits = model(images).squeeze(1)
             probs = torch.sigmoid(logits)
-        scores.extend(probs.detach().cpu().numpy().tolist())
+        scores.extend(probs.float().detach().cpu().numpy().tolist())
         ids.extend(list(batch_ids))
     return np.asarray(scores, dtype=np.float64), ids
 
@@ -134,9 +149,9 @@ def _run_epoch(
     context = torch.enable_grad() if train else torch.no_grad()
     with context:
         for images, labels, _ in tqdm(loader, leave=False, desc="train" if train else "eval"):
-            images = images.to(device, non_blocking=True)
+            images = _to_device(images, device, cfg)
             labels = labels.to(device, non_blocking=True)
-            with torch.autocast(device_type=device.type, enabled=cfg.amp and device.type == "cuda"):
+            with torch.autocast(device_type=device.type, dtype=_amp_dtype(cfg), enabled=cfg.amp and device.type == "cuda"):
                 logits = model(images).squeeze(1)
                 loss = loss_fn(logits, labels)
             if train:
@@ -179,6 +194,13 @@ def train_baseline(
     val_loader = _make_loader(val_df, cfg, train=False)
 
     model = build_model(cfg.model_name, pretrained=True).to(device)
+    if cfg.channels_last and device.type == "cuda":
+        model = model.to(memory_format=torch.channels_last)
+    if cfg.compile:
+        try:
+            model = torch.compile(model)
+        except Exception as exc:  # pragma: no cover - environment dependent
+            print(f"[warn] torch.compile disabled: {exc}")
     pos_weight = torch.tensor([pos_weight_from_frame(train_df)], device=device)
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)

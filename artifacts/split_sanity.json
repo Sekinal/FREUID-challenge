@@ -1,38 +1,63 @@
 {
-  "manifest_warnings": [
-    "Only 4 CV folds possible (5 type components)."
-  ],
+  "strategy": "stratified_group",
+  "manifest_warnings": [],
+  "n_groups": 64135,
+  "n_nontrivial_groups": 1124,
   "partitions": {
     "train": {
-      "n": 42625,
-      "n_fraud": 18623,
-      "fraud_rate": 0.43690322580645163,
-      "n_types": 3,
-      "n_groups": 42624,
-      "n_countries": 3
+      "n": 49537,
+      "n_fraud": 20962,
+      "fraud_rate": 0.42315844722126894,
+      "n_types": 5,
+      "n_groups": 47145,
+      "n_countries": 5
     },
     "val": {
-      "n": 13362,
-      "n_fraud": 5360,
-      "fraud_rate": 0.4011375542583446,
-      "n_types": 1,
-      "n_groups": 13360,
-      "n_countries": 1
+      "n": 9908,
+      "n_fraud": 4193,
+      "fraud_rate": 0.42319337908760596,
+      "n_types": 5,
+      "n_groups": 8962,
+      "n_countries": 5
     },
     "test": {
-      "n": 13365,
-      "n_fraud": 5364,
-      "fraud_rate": 0.40134680134680134,
-      "n_types": 1,
-      "n_groups": 13363,
-      "n_countries": 1
+      "n": 9907,
+      "n_fraud": 4192,
+      "fraud_rate": 0.4231351569597254,
+      "n_types": 5,
+      "n_groups": 8028,
+      "n_countries": 5
     }
+  },
+  "cv_fraud_rate_spread": {
+    "min": 0.42303162853297444,
+    "max": 0.42324838085625366,
+    "std": 8.125233567316121e-05,
+    "folds": 5
   },
   "duplicate_leakage_pairs": [],
   "duplicate_leakage_count": 0,
   "type_overlap": {
-    "train_val": [],
-    "train_test": [],
-    "val_test": []
+    "train_val": [
+      "BENIN/DL",
+      "EGYPT/DL",
+      "GUINEA/DL",
+      "MAURITIUS/ID",
+      "MOZAMBIQUE/DL"
+    ],
+    "train_test": [
+      "BENIN/DL",
+      "EGYPT/DL",
+      "GUINEA/DL",
+      "MAURITIUS/ID",
+      "MOZAMBIQUE/DL"
+    ],
+    "val_test": [
+      "BENIN/DL",
+      "EGYPT/DL",
+      "GUINEA/DL",
+      "MAURITIUS/ID",
+      "MOZAMBIQUE/DL"
+    ]
   }
 }
