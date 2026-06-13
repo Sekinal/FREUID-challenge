@@ -1,0 +1,62 @@
+{
+  "config": {
+    "model_name": "efficientnet_b2",
+    "img_size": 384,
+    "batch_size": 384,
+    "epochs": 3,
+    "lr": 0.0002,
+    "weight_decay": 0.0001,
+    "num_workers": 8,
+    "seed": 42,
+    "amp": true,
+    "max_train_samples": null
+  },
+  "device": "cuda",
+  "n_train": 42625,
+  "n_val": 13362,
+  "pos_weight": 1.2888363599777222,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.41136487498711627,
+      "val_loss": 2.116366331917899,
+      "val_freuid": 1.0,
+      "val_audet": 0.019974752114210265,
+      "val_apcer_at_1pct_bpcer": 1.0,
+      "lr": 0.00015000000000000001
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.008473877258061825,
+      "val_loss": 0.8996385795729501,
+      "val_freuid": 0.017435030958300124,
+      "val_audet": 0.0037136588054478914,
+      "val_apcer_at_1pct_bpcer": 0.030783582089552237,
+      "lr": 5.000000000000003e-05
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.003279670320979848,
+      "val_loss": 1.570690291268485,
+      "val_freuid": 1.0,
+      "val_audet": 0.008590413031070592,
+      "val_apcer_at_1pct_bpcer": 1.0,
+      "lr": 0.0
+    }
+  ],
+  "val": {
+    "freuid": 0.017435030958300124,
+    "audet": 0.0037136588054478914,
+    "apcer_at_1pct_bpcer": 0.030783582089552237,
+    "eer": 0.020443489873800208
+  },
+  "checkpoint_best": "/root/freuid/runs/baseline/best.pt",
+  "checkpoint_last": "/root/freuid/runs/baseline/last.pt",
+  "test": {
+    "freuid": 0.4054154778349257,
+    "audet": 0.2530503271356554,
+    "apcer_at_1pct_bpcer": 0.506152125279642,
+    "eer": 0.33635529199789627,
+    "n": 13365
+  }
+}

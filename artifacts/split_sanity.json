@@ -1,0 +1,38 @@
+{
+  "manifest_warnings": [
+    "Only 4 CV folds possible (5 type components)."
+  ],
+  "partitions": {
+    "train": {
+      "n": 42625,
+      "n_fraud": 18623,
+      "fraud_rate": 0.43690322580645163,
+      "n_types": 3,
+      "n_groups": 42624,
+      "n_countries": 3
+    },
+    "val": {
+      "n": 13362,
+      "n_fraud": 5360,
+      "fraud_rate": 0.4011375542583446,
+      "n_types": 1,
+      "n_groups": 13360,
+      "n_countries": 1
+    },
+    "test": {
+      "n": 13365,
+      "n_fraud": 5364,
+      "fraud_rate": 0.40134680134680134,
+      "n_types": 1,
+      "n_groups": 13363,
+      "n_countries": 1
+    }
+  },
+  "duplicate_leakage_pairs": [],
+  "duplicate_leakage_count": 0,
+  "type_overlap": {
+    "train_val": [],
+    "train_test": [],
+    "val_test": []
+  }
+}

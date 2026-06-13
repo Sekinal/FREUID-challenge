@@ -4,9 +4,14 @@ embeddings/
 *.zip
 *.npy
 
+# Large, regenerable split manifests (rebuild via scripts/09_build_splits.py)
+artifacts/splits/
+
 # ---- Credentials / secrets ----
 .kaggle/
 access_token
+# LOCAL_CREDENTIALS.txt — solo en el Mac del usuario; nunca commit/push
+LOCAL_CREDENTIALS.txt
 *.git-credentials
 .env
 
@@ -18,6 +23,8 @@ dist/
 wheels/
 *.egg-info/
 .venv/
+runs/
+submissions/
 .ipynb_checkpoints/
 
 # ---- OS / editor ----
