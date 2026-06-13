@@ -33,6 +33,7 @@ class BaselineConfig:
     channels_last: bool = True     # NHWC: faster convs under AMP on Ampere+
     compile: bool = True           # torch.compile fuses kernels (falls back on error)
     prefetch_factor: int = 4
+    capture_aug: bool = True
     max_train_samples: int | None = None
 
 
@@ -83,7 +84,7 @@ def _maybe_subset(frame: pd.DataFrame, max_samples: int | None) -> pd.DataFrame:
 def _make_loader(frame: pd.DataFrame, cfg: BaselineConfig, train: bool) -> DataLoader:
     ds = data.DocumentDataset(
         frame,
-        cfg=data.DataConfig(img_size=cfg.img_size, train=train),
+        cfg=data.DataConfig(img_size=cfg.img_size, train=train, capture_aug=cfg.capture_aug),
     )
     return DataLoader(
         ds,
@@ -176,6 +177,7 @@ def train_baseline(
     cfg: BaselineConfig | None = None,
     run_dir: Path | None = None,
     test_df: pd.DataFrame | None = None,
+    save_artifact: bool = True,
 ) -> dict:
     """Train a simple EfficientNet baseline and score val/test with FREUID."""
     cfg = cfg or BaselineConfig()
@@ -267,7 +269,8 @@ def train_baseline(
             "n": len(test_df),
         }
     (run_dir / "results.json").write_text(json.dumps(result, indent=2))
-    io.save_json("baseline_results.json", result)
+    if save_artifact:
+        io.save_json("baseline_results.json", result)
     return result
 
 
@@ -276,6 +279,9 @@ def load_model(checkpoint_path: Path, device: torch.device | None = None) -> tup
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     cfg = BaselineConfig(**ckpt["cfg"])
     model = build_model(cfg.model_name, pretrained=False).to(device)
-    model.load_state_dict(ckpt["model"])
+    # checkpoints saved from a torch.compile'd model carry a "_orig_mod." prefix
+    state = {(k[len("_orig_mod."):] if k.startswith("_orig_mod.") else k): v
+             for k, v in ckpt["model"].items()}
+    model.load_state_dict(state)
     model.eval()
     return model, cfg

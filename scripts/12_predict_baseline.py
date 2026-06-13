@@ -24,6 +24,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--checkpoint", default=str(config.RUNS_DIR / "baseline" / "best.pt"))
     p.add_argument("--out", default=str(config.SUBMISSIONS_DIR / "baseline_submission.csv"))
     p.add_argument("--batch-size", type=int, default=None)
+    p.add_argument("--fill", type=float, default=0.5,
+                   help="Constant for private ids without local images. Ignored by the "
+                        "public LB (private dummies are not scored), so a fixed constant "
+                        "keeps submissions comparable across runs.")
     return p.parse_args()
 
 
@@ -55,9 +59,9 @@ def main() -> None:
         out = sub[[config.ID_COL]].merge(pred, on=config.ID_COL, how="left")
         missing = int(out[config.LABEL_COL].isna().sum())
         if missing:
-            fill = float(pred[config.LABEL_COL].mean())
-            print(f"[warn] {missing} ids without local images; filling with mean score {fill:.4f}")
-            out[config.LABEL_COL] = out[config.LABEL_COL].fillna(fill)
+            print(f"[warn] {missing} private ids without local images; filling with "
+                  f"constant {args.fill} (not scored on the public LB)")
+            out[config.LABEL_COL] = out[config.LABEL_COL].fillna(args.fill)
     else:
         print("[warn] public_test not found; writing sample_submission with 0.5 scores")
         out = io.load_sample_submission()
