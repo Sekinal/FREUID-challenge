@@ -1,5 +1,29 @@
 # Results, Runs & Open Questions
 
+## Synthesis: where the lever is (read this first)
+
+Everything we've measured triangulates on one conclusion: **the fraud signature is
+*type-entangled*, so there is no single-image silver bullet — the lever is data, not a
+cleverer feature.** Evidence:
+
+| Approach | In-dist | Unseen-type (LOTO/x-country) | Lesson |
+|---|---|---|---|
+| EfficientNet-b2 (digital) | FREUID ~0.0001 | public 0.291 | in-dist ≫ overstates reality |
+| ConvNeXt **no aux** (x-country) | — | FREUID 0.98 | no external data ⇒ no OOD |
+| EffNetV2-M + **30k IDNet aux** | — | FREUID **0.356** | **data is the 3× lever** |
+| 66 scalar forensic features | AUC 0.995 | AUC **0.452** (below chance) | features memorise type |
+| FFT cross-type fingerprint corr | — | **+0.06** | no universal generation signature |
+| Normalised spectral *shape* | — | AUC **0.63–0.65** | transfers better; fusion candidate |
+
+So, in priority order, the levers that actually move the OOD number:
+1. **More + more *diverse* external fraud data** — the only thing that attacks type-entanglement
+   head-on (IDNet gave the one 3× win). Highest expected payoff.
+2. **Fuse the normalised-spectral stream into the CNN** — orthogonal to RGB, transfers across
+   types (0.45→0.65). Secondary, cheap, stackable on a *single* model.
+3. **Scale the single EffNetV2** (resolution / epochs / TTA) on the leakage-safe LOTO harness.
+
+(No ensembling until one model is genuinely strong — user directive.)
+
 ## Baseline (EfficientNet-b2, leakage-safe stratified-group splits)
 
 3 epochs, batch 512, bf16 + channels_last + torch.compile, AuDET checkpoint selection, A100.
