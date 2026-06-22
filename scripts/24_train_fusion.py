@@ -81,13 +81,17 @@ def main():
     pipe = validation.ValidationPipeline(rebuild=args.rebuild_splits)
     train, val, test = resolve(pipe.train), resolve(pipe.val), resolve(pipe.test)
 
-    # leave-one-type-out: pull the held type out of train/val, make it the test set
+    # leave-one-type-out: the held type becomes the (clean) test; carve a checkpoint
+    # val out of the REMAINING training types (never from the held-out type).
     if args.loto_type:
         full = pd.concat([train, val, test], ignore_index=True)
         test = full[full[config.TYPE_COL] == args.loto_type].reset_index(drop=True)
-        train = train[train[config.TYPE_COL] != args.loto_type].reset_index(drop=True)
-        val = val[val[config.TYPE_COL] != args.loto_type].reset_index(drop=True)
-        print(f"[loto] held out {args.loto_type}: test={len(test):,}  train={len(train):,}")
+        pool = full[full[config.TYPE_COL] != args.loto_type].reset_index(drop=True)
+        val = pool.sample(min(5000, max(1, len(pool) // 10)), random_state=0)
+        train = pool.drop(val.index).reset_index(drop=True)
+        val = val.reset_index(drop=True)
+        print(f"[loto] held out {args.loto_type}: test={len(test):,}  "
+              f"train={len(train):,}  val={len(val):,}")
 
     if args.smoke:
         train = train.sample(min(len(train), 1500), random_state=0).reset_index(drop=True)
