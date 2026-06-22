@@ -1,0 +1,81 @@
+==================================================================
+[Mon Jun 22 07:13:05 UTC 2026] OVERNIGHT CHAIN START
+==================================================================
+[Mon Jun 22 07:13:05 UTC 2026] extra IDNet listo
+------------------------------------------------------------------
+[Mon Jun 22 07:13:05 UTC 2026] >>> e1_convnext_aug
+    args: --model convnext_base.fb_in22k_ft_in1k --img-size 384 --aug domain --loss bce --aux-dirs data/aux/idnet2025 --max-aux 30000 --epochs 3 --batch-size 128 --lr 5e-5
+[Mon Jun 22 07:31:44 UTC 2026] <<< e1_convnext_aug OK
+  val  FREUID=0.0015  AuDET=0.0007  APCER@1%=0.0022
+  test FREUID=0.4026  AuDET=0.2564  APCER@1%=0.5007
+------------------------------------------------------------------
+[Mon Jun 22 07:31:44 UTC 2026] >>> e2_convnext_aug_focal
+    args: --model convnext_base.fb_in22k_ft_in1k --img-size 384 --aug domain --loss focal --aux-dirs data/aux/idnet2025 --max-aux 30000 --epochs 3 --batch-size 128 --lr 5e-5
+[Mon Jun 22 07:50:16 UTC 2026] <<< e2_convnext_aug_focal OK
+  val  FREUID=0.8148  AuDET=0.2184  APCER@1%=0.8950
+  test FREUID=0.9179  AuDET=0.3875  APCER@1%=0.9560
+------------------------------------------------------------------
+[Mon Jun 22 07:50:16 UTC 2026] >>> e3_convnext_moreaux
+    args: --model convnext_base.fb_in22k_ft_in1k --img-size 384 --aug domain --loss focal --aux-dirs data/aux/idnet2025,data/aux/idnet2025_scanned --max-aux 45000 --epochs 3 --batch-size 128 --lr 5e-5
+[Mon Jun 22 08:12:07 UTC 2026] <<< e3_convnext_moreaux OK
+  val  FREUID=0.9996  AuDET=0.7855  APCER@1%=0.9998
+  test FREUID=0.9952  AuDET=0.5738  APCER@1%=0.9976
+------------------------------------------------------------------
+[Mon Jun 22 08:12:07 UTC 2026] >>> e4_dinov2_aug_focal
+    args: --model vit_base_patch14_dinov2.lvd142m --img-size 224 --aug domain --loss focal --aux-dirs data/aux/idnet2025 --max-aux 30000 --epochs 3 --batch-size 192 --lr 5e-5
+[Mon Jun 22 08:19:15 UTC 2026] <<< e4_dinov2_aug_focal OK
+  val  FREUID=0.8189  AuDET=0.2071  APCER@1%=0.8978
+  test FREUID=0.8764  AuDET=0.3778  APCER@1%=0.9314
+------------------------------------------------------------------
+[Mon Jun 22 08:19:15 UTC 2026] >>> e5_effnetv2m_aug_focal
+    args: --model tf_efficientnetv2_m.in21k_ft_in1k --img-size 384 --aug domain --loss focal --aux-dirs data/aux/idnet2025 --max-aux 30000 --epochs 3 --batch-size 96 --lr 1e-4
+[Mon Jun 22 08:36:53 UTC 2026] <<< e5_effnetv2m_aug_focal OK
+  val  FREUID=0.0039  AuDET=0.0012  APCER@1%=0.0065
+  test FREUID=0.3556  AuDET=0.1635  APCER@1%=0.4760
+==================================================================
+[Mon Jun 22 08:36:53 UTC 2026] BARRIDO terminado. Resumen:
+run                         model                             aug     loss    ntrain      val     TEST    audet    apcer
+--------------------------------------------------------------------------------------------------------------------------------
+e5_effnetv2m_aug_focal      tf_efficientnetv2_m.in21k_ft_in1k domain  focal    72625   0.0039   0.3556   0.1635   0.4760
+convnext_aux                convnext_base.fb_in22k_ft_in1k    ?       ?        72625   0.0022   0.4005   0.2485   0.5013
+e1_convnext_aug             convnext_base.fb_in22k_ft_in1k    domain  bce      72625   0.0015   0.4026   0.2564   0.5007
+e4_dinov2_aug_focal         vit_base_patch14_dinov2.lvd142m   domain  focal    72625   0.8189   0.8764   0.3778   0.9314
+e2_convnext_aug_focal       convnext_base.fb_in22k_ft_in1k    domain  focal    72625   0.8148   0.9179   0.3875   0.9560
+e3_convnext_moreaux         convnext_base.fb_in22k_ft_in1k    domain  focal    87625   0.9996   0.9952   0.5738   0.9976
+
+(lower TEST FREUID = better cross-country generalization)
+==================================================================
+------------------------------------------------------------------
+[Mon Jun 22 08:36:53 UTC 2026] >>> f1_convnext_all
+    args: --model convnext_base.fb_in22k_ft_in1k --img-size 384 --aug domain --loss focal --aux-dirs data/aux/idnet2025,data/aux/idnet2025_scanned --max-aux 60000 --epochs 4 --batch-size 128 --lr 5e-5 --train-all
+[Mon Jun 22 09:13:22 UTC 2026] <<< f1_convnext_all OK
+  val  FREUID=0.9843  AuDET=0.4049  APCER@1%=0.9920
+------------------------------------------------------------------
+[Mon Jun 22 09:13:22 UTC 2026] >>> f2_dinov2_all
+    args: --model vit_base_patch14_dinov2.lvd142m --img-size 224 --aug domain --loss focal --aux-dirs data/aux/idnet2025 --max-aux 40000 --epochs 4 --batch-size 192 --lr 5e-5 --train-all
+[Mon Jun 22 09:23:38 UTC 2026] <<< f2_dinov2_all OK
+  val  FREUID=0.1913  AuDET=0.0851  APCER@1%=0.2754
+[Mon Jun 22 09:23:38 UTC 2026] Generando submissions...
+  sub_convnext_3country.csv OK
+  sub_f1_convnext_all.csv OK
+  sub_ensemble_all.csv OK
+==================================================================
+[Mon Jun 22 09:26:07 UTC 2026] CHAIN COMPLETO. Resumen final:
+run                         model                             aug     loss    ntrain      val     TEST    audet    apcer
+--------------------------------------------------------------------------------------------------------------------------------
+e5_effnetv2m_aug_focal      tf_efficientnetv2_m.in21k_ft_in1k domain  focal    72625   0.0039   0.3556   0.1635   0.4760
+convnext_aux                convnext_base.fb_in22k_ft_in1k    ?       ?        72625   0.0022   0.4005   0.2485   0.5013
+e1_convnext_aug             convnext_base.fb_in22k_ft_in1k    domain  bce      72625   0.0015   0.4026   0.2564   0.5007
+e4_dinov2_aug_focal         vit_base_patch14_dinov2.lvd142m   domain  focal    72625   0.8189   0.8764   0.3778   0.9314
+e2_convnext_aug_focal       convnext_base.fb_in22k_ft_in1k    domain  focal    72625   0.8148   0.9179   0.3875   0.9560
+e3_convnext_moreaux         convnext_base.fb_in22k_ft_in1k    domain  focal    87625   0.9996   0.9952   0.5738   0.9976
+f1_convnext_all             convnext_base.fb_in22k_ft_in1k    domain  focal   125191   0.9843     -        -        -   
+f2_dinov2_all               vit_base_patch14_dinov2.lvd142m   domain  focal   105191   0.1913     -        -        -   
+
+(lower TEST FREUID = better cross-country generalization)
+Submissions generadas (NO subidas):
+-rw-r--r-- 1 root root 6846690 Jun 22 09:24 submissions/sub_convnext_3country.csv
+-rw-r--r-- 1 root root 6859232 Jun 22 09:26 submissions/sub_ensemble_all.csv
+-rw-r--r-- 1 root root 6577497 Jun 22 09:25 submissions/sub_f1_convnext_all.csv
+[Mon Jun 22 09:26:08 UTC 2026] FIN
+==================================================================

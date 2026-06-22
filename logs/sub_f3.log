@@ -1,0 +1,5 @@
+[info] ensembling 1 checkpoint(s): ['runs/f3_effnetv2_all/best.pt']
+[info] scoring public_test (7,821 images)
+  [predict] runs/f3_effnetv2_all/best.pt: 7,821 scores
+[warn] 134,997 ids without local images; filling with median 0.2158
+[done] wrote submissions/sub_f3_effnetv2_all.csv (142,818 rows). NOT uploaded.

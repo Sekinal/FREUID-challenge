@@ -1,0 +1,35 @@
+==================================================================
+[Mon Jun 22 07:20:11 UTC 2026] PHASE2 esperando a que termine la cadena 'overnight'...
+[Mon Jun 22 09:26:12 UTC 2026] cadena terminada. Empezando fase 2.
+[Mon Jun 22 09:26:12 UTC 2026] >>> e0_noaux (ablacion sin IDNet)
+[Mon Jun 22 09:38:30 UTC 2026] e0_noaux OK
+  val  FREUID=0.8199  AuDET=0.3182  APCER@1%=0.8963
+  test FREUID=0.9809  AuDET=0.4209  APCER@1%=0.9903
+[Mon Jun 22 09:38:30 UTC 2026] >>> pseudo-labeling
+[Mon Jun 22 10:10:32 UTC 2026] pseudolabel OK
+[info] confident pseudo-labels: 0 (fraud=0, genuine=0) of 7,821 [0% kept]
+[info] student trained. holdout val FREUID=0.1823
+[done] wrote submissions/sub_pseudolabel.csv (142,818 rows). NOT uploaded.
+==================================================================
+[Mon Jun 22 10:10:32 UTC 2026] PHASE2 COMPLETO. Resumen:
+run                         model                             aug     loss    ntrain      val     TEST    audet    apcer
+--------------------------------------------------------------------------------------------------------------------------------
+e5_effnetv2m_aug_focal      tf_efficientnetv2_m.in21k_ft_in1k domain  focal    72625   0.0039   0.3556   0.1635   0.4760
+convnext_aux                convnext_base.fb_in22k_ft_in1k    ?       ?        72625   0.0022   0.4005   0.2485   0.5013
+e1_convnext_aug             convnext_base.fb_in22k_ft_in1k    domain  bce      72625   0.0015   0.4026   0.2564   0.5007
+e4_dinov2_aug_focal         vit_base_patch14_dinov2.lvd142m   domain  focal    72625   0.8189   0.8764   0.3778   0.9314
+e2_convnext_aug_focal       convnext_base.fb_in22k_ft_in1k    domain  focal    72625   0.8148   0.9179   0.3875   0.9560
+e0_noaux                    convnext_base.fb_in22k_ft_in1k    domain  focal    42625   0.8199   0.9809   0.4209   0.9903
+e3_convnext_moreaux         convnext_base.fb_in22k_ft_in1k    domain  focal    87625   0.9996   0.9952   0.5738   0.9976
+f1_convnext_all             convnext_base.fb_in22k_ft_in1k    domain  focal   125191   0.9843     -        -        -   
+f2_dinov2_all               vit_base_patch14_dinov2.lvd142m   domain  focal   105191   0.1913     -        -        -   
+pl_convnext                 convnext_base.fb_in22k_ft_in1k    domain  focal   105885   0.1823     -        -        -   
+
+(lower TEST FREUID = better cross-country generalization)
+Submissions:
+-rw-r--r-- 1 root root 6846690 Jun 22 09:24 submissions/sub_convnext_3country.csv
+-rw-r--r-- 1 root root 6859232 Jun 22 09:26 submissions/sub_ensemble_all.csv
+-rw-r--r-- 1 root root 6577497 Jun 22 09:25 submissions/sub_f1_convnext_all.csv
+-rw-r--r-- 1 root root 6577508 Jun 22 10:10 submissions/sub_pseudolabel.csv
+[Mon Jun 22 10:10:33 UTC 2026] FIN PHASE2
+==================================================================

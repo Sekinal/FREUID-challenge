@@ -1,0 +1,39 @@
+[Mon Jun 22 06:02:03 UTC 2026] descargando EST.tar.gz ...
+/root/freuid/.venv/lib/python3.12/site-packages/huggingface_hub/constants.py:298: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+[32m✓ Downloaded[0m
+  path: /root/freuid/data/aux/idnet2025/EST.tar.gz
+[Mon Jun 22 06:02:09 UTC 2026] extrayendo EST ...
+[Mon Jun 22 06:02:18 UTC 2026] descargando SVK.tar.gz ...
+/root/freuid/.venv/lib/python3.12/site-packages/huggingface_hub/constants.py:298: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+[32m✓ Downloaded[0m
+  path: /root/freuid/data/aux/idnet2025/SVK.tar.gz
+[Mon Jun 22 06:02:28 UTC 2026] extrayendo SVK ...
+[Mon Jun 22 06:02:44 UTC 2026] descargando ESP.tar.gz ...
+/root/freuid/.venv/lib/python3.12/site-packages/huggingface_hub/constants.py:298: FutureWarning: The `HF_HUB_ENABLE_HF_TRANSFER` environment variable is deprecated as 'hf_transfer' is not used anymore. Please use `HF_XET_HIGH_PERFORMANCE` instead to enable high performance transfer with Xet. Visit https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables#hfxethighperformance for more details.
+  warnings.warn(
+[32m✓ Downloaded[0m
+  path: /root/freuid/data/aux/idnet2025/ESP.tar.gz
+[Mon Jun 22 06:02:54 UTC 2026] extrayendo ESP ...
+[Mon Jun 22 06:03:13 UTC 2026] IDNet listo. Estructura:
+.
+./EST
+./EST/fraud5_inpaint_and_rewrite
+./EST/positive
+./EST/fraud6_crop_and_replace
+./EST/meta
+./.cache
+./.cache/huggingface
+./ESP
+./ESP/fraud5_inpaint_and_rewrite
+./ESP/positive
+./ESP/fraud6_crop_and_replace
+./ESP/meta
+./SVK
+./SVK/fraud5_inpaint_and_rewrite
+./SVK/positive
+./SVK/fraud6_crop_and_replace
+./SVK/meta
+total imagenes idnet:
+52615

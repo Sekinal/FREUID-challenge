@@ -4,13 +4,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import torch
-from PIL import Image
+from PIL import Image, ImageFile
 from torch.utils.data import Dataset
 from torchvision import transforms as T
 
 from . import config
+
+# Some dataset images (esp. external/IDNet) are slightly truncated; tolerate
+# them instead of crashing a DataLoader worker mid-epoch.
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -20,9 +25,48 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 class DataConfig:
     img_size: int = 384
     train: bool = True
+    aug: str = "none"          # "none" | "domain" (cross-capture augmentation)
 
 
-def build_transforms(cfg: DataConfig) -> T.Compose:
+class _AlbumentationsTransform:
+    """Adapter so an albumentations pipeline can take a PIL image like torchvision."""
+
+    def __init__(self, pipeline) -> None:
+        self.pipeline = pipeline
+
+    def __call__(self, image):
+        return self.pipeline(image=np.asarray(image))["image"]
+
+
+def _domain_transform(img_size: int) -> _AlbumentationsTransform:
+    """Cross-domain augmentation: simulate capture/compression/lighting shifts.
+
+    Targets the FREUID failure mode — a model that overfits the training
+    countries' capture artifacts and fails on unseen ones. Uses albumentations.
+    """
+    import albumentations as A
+    from albumentations.pytorch import ToTensorV2
+
+    pipeline = A.Compose(
+        [
+            A.Resize(img_size, img_size),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+            A.HueSaturationValue(hue_shift_limit=8, sat_shift_limit=15, val_shift_limit=10, p=0.3),
+            A.GaussNoise(p=0.3),
+            A.ImageCompression(quality_range=(55, 100), p=0.4),
+            A.Perspective(scale=(0.02, 0.07), p=0.3),
+            A.GaussianBlur(blur_limit=(3, 5), p=0.2),
+            A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ToTensorV2(),
+        ]
+    )
+    return _AlbumentationsTransform(pipeline)
+
+
+def build_transforms(cfg: DataConfig):
+    if cfg.train and cfg.aug == "domain":
+        return _domain_transform(cfg.img_size)
     if cfg.train:
         return T.Compose(
             [

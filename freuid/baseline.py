@@ -30,6 +30,10 @@ class BaselineConfig:
     seed: int = 42
     amp: bool = True
     max_train_samples: int | None = None
+    aug: str = "none"            # "none" | "domain"
+    loss_type: str = "bce"       # "bce" | "focal"
+    focal_alpha: float = 0.25
+    focal_gamma: float = 2.0
 
 
 def set_seed(seed: int) -> None:
@@ -43,20 +47,16 @@ def get_device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def configure_backends(device: torch.device) -> None:
-    """Enable TF32 + cuDNN autotuning for faster training on Ampere+ GPUs (A100)."""
-    if device.type == "cuda":
-        torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
-        torch.backends.cudnn.benchmark = True
-        try:
-            torch.set_float32_matmul_precision("high")
-        except Exception:
-            pass
+_VIT_LIKE = ("vit", "dinov2", "deit", "beit", "eva", "samvit")
 
 
-def build_model(model_name: str, pretrained: bool = True) -> nn.Module:
-    return timm.create_model(model_name, pretrained=pretrained, num_classes=1)
+def build_model(model_name: str, pretrained: bool = True, img_size: int | None = None) -> nn.Module:
+    kwargs: dict = {}
+    # ViT-family backbones need img_size to (re)interpolate position embeddings
+    # (e.g. DINOv2 is pretrained at 518px); CNNs don't accept the kwarg.
+    if img_size is not None and any(k in model_name for k in _VIT_LIKE):
+        kwargs["img_size"] = img_size
+    return timm.create_model(model_name, pretrained=pretrained, num_classes=1, **kwargs)
 
 
 def _maybe_subset(frame: pd.DataFrame, max_samples: int | None) -> pd.DataFrame:
@@ -68,7 +68,7 @@ def _maybe_subset(frame: pd.DataFrame, max_samples: int | None) -> pd.DataFrame:
 def _make_loader(frame: pd.DataFrame, cfg: BaselineConfig, train: bool) -> DataLoader:
     ds = data.DocumentDataset(
         frame,
-        cfg=data.DataConfig(img_size=cfg.img_size, train=train),
+        cfg=data.DataConfig(img_size=cfg.img_size, train=train, aug=cfg.aug if train else "none"),
     )
     return DataLoader(
         ds,
@@ -161,16 +161,28 @@ def train_baseline(
     cfg: BaselineConfig | None = None,
     run_dir: Path | None = None,
     test_df: pd.DataFrame | None = None,
+    prefiltered: bool = False,
 ) -> dict:
-    """Train a simple EfficientNet baseline and score val/test with FREUID."""
+    """Train a simple EfficientNet baseline and score val/test with FREUID.
+
+    When ``prefiltered`` is True the train frame is assumed to already carry a
+    valid ``abs_path`` column (e.g. it mixes auxiliary images that do not live
+    in the FREUID image index), so train paths are not re-resolved — only rows
+    whose ``abs_path`` exists on disk are kept. Val/test are always FREUID
+    frames, re-resolved against the FREUID index for honest cross-country scores.
+    """
     cfg = cfg or BaselineConfig()
     run_dir = Path(run_dir) if run_dir else config.RUNS_DIR / "baseline"
     run_dir.mkdir(parents=True, exist_ok=True)
     set_seed(cfg.seed)
     device = get_device()
-    configure_backends(device)
 
-    train_df = io.filter_with_images(_maybe_subset(train_df, cfg.max_train_samples))
+    if prefiltered:
+        train_df = _maybe_subset(train_df, cfg.max_train_samples).copy()
+        keep = train_df["abs_path"].map(lambda p: bool(p) and Path(str(p)).exists())
+        train_df = train_df[keep].reset_index(drop=True)
+    else:
+        train_df = io.filter_with_images(_maybe_subset(train_df, cfg.max_train_samples))
     val_df = io.filter_with_images(val_df)
     if test_df is not None:
         test_df = io.filter_with_images(test_df)
@@ -178,14 +190,22 @@ def train_baseline(
     train_loader = _make_loader(train_df, cfg, train=True)
     val_loader = _make_loader(val_df, cfg, train=False)
 
-    model = build_model(cfg.model_name, pretrained=True).to(device)
+    model = build_model(cfg.model_name, pretrained=True, img_size=cfg.img_size).to(device)
     pos_weight = torch.tensor([pos_weight_from_frame(train_df)], device=device)
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    if cfg.loss_type == "focal":
+        from torchvision.ops import sigmoid_focal_loss
+
+        def loss_fn(logits, labels):
+            return sigmoid_focal_loss(
+                logits, labels, alpha=cfg.focal_alpha, gamma=cfg.focal_gamma, reduction="mean"
+            )
+    else:
+        loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(cfg.epochs, 1))
 
     history: list[dict] = []
-    best_audet = math.inf
+    best_freuid = math.inf
     best_path = run_dir / "best.pt"
 
     for epoch in range(1, cfg.epochs + 1):
@@ -204,13 +224,8 @@ def train_baseline(
         }
         history.append(row)
         torch.save({"model": model.state_dict(), "cfg": asdict(cfg), "epoch": epoch}, run_dir / "last.pt")
-        # Select the best checkpoint by AuDET, not FREUID. FREUID folds in
-        # APCER@1%BPCER -- a single near-threshold operating point that collapses
-        # to 1.0 whenever no threshold meets the 1% BPCER budget (observed as
-        # epoch-to-epoch 0.017 -> 1.0 swings). AuDET is the area under the whole
-        # DET curve, so it is a smooth, stable model-selection signal.
-        if val_metrics.audet < best_audet:
-            best_audet = val_metrics.audet
+        if val_metrics.freuid < best_freuid:
+            best_freuid = val_metrics.freuid
             torch.save({"model": model.state_dict(), "cfg": asdict(cfg), "epoch": epoch}, best_path)
 
     # reload best checkpoint for final scoring
@@ -253,7 +268,7 @@ def load_model(checkpoint_path: Path, device: torch.device | None = None) -> tup
     device = device or get_device()
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
     cfg = BaselineConfig(**ckpt["cfg"])
-    model = build_model(cfg.model_name, pretrained=False).to(device)
+    model = build_model(cfg.model_name, pretrained=False, img_size=cfg.img_size).to(device)
     model.load_state_dict(ckpt["model"])
     model.eval()
     return model, cfg

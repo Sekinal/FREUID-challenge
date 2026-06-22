@@ -1,0 +1,15 @@
+==================================================================
+[Mon Jun 22 16:44:02 UTC 2026] PHASE3: submission del mejor (e5) + final all-5 EffNetV2-M
+[Mon Jun 22 16:44:02 UTC 2026] >>> submission e5 (EffNetV2-M 3-country)
+[Mon Jun 22 16:45:02 UTC 2026] sub_e5 OK
+[score] ensemble LOCAL TEST (Mozambique): FREUID=0.3556 AuDET=0.1635 APCER@1%=0.4760
+[done] wrote submissions/sub_e5_effnetv2_3country.csv (142,818 rows). NOT uploaded.
+[Mon Jun 22 16:45:02 UTC 2026] >>> f3_effnetv2_all (train-all)
+[Mon Jun 22 17:13:48 UTC 2026] f3 OK
+  val  FREUID=0.0004  AuDET=0.0003  APCER@1%=0.0006
+[Mon Jun 22 17:13:48 UTC 2026] >>> submission f3 (all-5)
+[Mon Jun 22 17:14:26 UTC 2026] sub_f3 OK
+[Mon Jun 22 17:14:26 UTC 2026] PHASE3 COMPLETO
+-rw-r--r-- 1 root root 6714761 Jun 22 16:44 submissions/sub_e5_effnetv2_3country.csv
+-rw-r--r-- 1 root root 6543993 Jun 22 17:14 submissions/sub_f3_effnetv2_all.csv
+==================================================================

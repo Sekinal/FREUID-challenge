@@ -4,9 +4,6 @@ embeddings/
 *.zip
 *.npy
 
-# Large, regenerable split manifests (rebuild via scripts/09_build_splits.py)
-artifacts/splits/
-
 # ---- Credentials / secrets ----
 .kaggle/
 access_token
@@ -29,3 +26,12 @@ submissions/
 
 # ---- OS / editor ----
 .DS_Store
+
+# Large, regenerable split manifests (rebuild via scripts/09_build_splits.py)
+artifacts/splits/
+
+# transient validation smoke output (random scorer)
+artifacts/validation_smoke.json
+
+# full near-dup pairs are large + regenerable (scripts/05); keep only the summary
+artifacts/duplicates.json

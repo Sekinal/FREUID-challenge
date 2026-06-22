@@ -1,0 +1,7 @@
+[info] ensembling 1 checkpoint(s): ['runs/e5_effnetv2m_aug_focal/best.pt']
+  [predict] runs/e5_effnetv2m_aug_focal/best.pt: 13,365 scores
+[score] ensemble LOCAL TEST (Mozambique): FREUID=0.3556 AuDET=0.1635 APCER@1%=0.4760
+[info] scoring public_test (7,821 images)
+  [predict] runs/e5_effnetv2m_aug_focal/best.pt: 7,821 scores
+[warn] 134,997 ids without local images; filling with median 0.2573
+[done] wrote submissions/sub_e5_effnetv2_3country.csv (142,818 rows). NOT uploaded.

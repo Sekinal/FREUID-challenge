@@ -1,0 +1,7 @@
+[info] ensembling 1 checkpoint(s): ['runs/e3_convnext_moreaux/best.pt']
+  [predict] runs/e3_convnext_moreaux/best.pt: 13,365 scores
+[score] ensemble LOCAL TEST (Mozambique): FREUID=0.9952 AuDET=0.5737 APCER@1%=0.9976
+[info] scoring public_test (7,821 images)
+  [predict] runs/e3_convnext_moreaux/best.pt: 7,821 scores
+[warn] 134,997 ids without local images; filling with median 0.4202
+[done] wrote submissions/sub_convnext_3country.csv (142,818 rows). NOT uploaded.
