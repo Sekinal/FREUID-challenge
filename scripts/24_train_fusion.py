@@ -119,7 +119,8 @@ def main():
                               num_workers=args.workers)
     tag = ("nofusion" if args.no_fusion else "fusion") + (
         f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type else "")
-    eval_sets = {"test": (test, test_feats), "val": (val, val_feats)}
+    # val first -> checkpoint selection uses val AuDET (never peeks at the held-out test type)
+    eval_sets = {"val": (val, val_feats), "test": (test, test_feats)}
     res = fusion.train_fusion(train, train_feats, eval_sets, cfg, save_name=f"fusion_{tag}")
     res["tag"] = tag
     io.save_json(f"fusion_result_{tag}.json", res)
