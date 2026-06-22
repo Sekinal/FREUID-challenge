@@ -35,3 +35,6 @@ artifacts/validation_smoke.json
 
 # full near-dup pairs are large + regenerable (scripts/05); keep only the summary
 artifacts/duplicates.json
+
+# forensic feature matrix (large, regenerable via scripts/14)
+artifacts/forensic_features.npz
