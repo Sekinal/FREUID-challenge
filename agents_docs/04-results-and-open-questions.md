@@ -15,6 +15,7 @@ cleverer feature.** Evidence:
 | FFT cross-type fingerprint corr | — | **+0.06** | no universal generation signature |
 | Normalised spectral *shape* | — | AUC **0.63–0.65** | transfers better; fusion candidate |
 | **NPR** (CVPR 2024, up-sampling artifacts) | — | AUC **0.49–0.53** (chance) | wrong paradigm (see below) |
+| **CLIP frozen + linear probe** (UnivFD) | — | AUC **0.686** | **best single-feature OOD**; semantic, fusion candidate |
 
 So, in priority order, the levers that actually move the OOD number:
 1. **More + more *diverse* external fraud data** — the only thing that attacks type-entanglement
@@ -208,14 +209,20 @@ Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapes
   *localized* document manipulation + print-and-capture. There is no global up-sampling fingerprint,
   and any capture-resampling artifact is shared by fraud and genuine. The off-the-shelf
   "AI-generated-image detector" paradigm is a category mismatch for document fraud.
-- **Still on the list (genuinely different hypotheses):**
-  - **CLIP frozen-feature probe** (UnivFD; C2P-CLIP / FatFormer, 2024) — frozen CLIP-ViT
-    clusters real images, fakes are outliers; the cross-generator winner. Must stay *frozen*
-    (fine-tuning ⇒ catastrophic forgetting). Tests a *semantic, type-general* representation,
-    unlike all the low-level transforms above. **Best next probe.**
-  - **Forgery *localization*** (SAFIRE / SAM-based, 2025; DocForge-Bench, 2026) — predict the
-    tampered *region*. Apt because the manipulations are local, but needs region labels we
-    don't have (IDNet may provide some).
+- **CLIP frozen-feature probe — UnivFD (Ojha et al.)** (`scripts/19`, GPU). Frozen
+  ViT-B/16 OpenAI-CLIP features (768-d) + a probe, leave-one-type-out, n=24,000.
+  **Best single-feature OOD result so far:** linear probe **mean AUC 0.686** (per type
+  0.54 / 0.65 / **0.85** / **0.81** / 0.59), GBM 0.622. Two findings that match the paper and
+  matter: (1) **linear > GBM** — frozen CLIP + a *simple* probe generalises best; complex
+  classifiers overfit seen types (so keep it linear, keep CLIP frozen). (2) **CLIP handles the
+  unseen ID type** (MAURITIUS/ID AUC 0.81) where scalar forensics *inverted* (0.19) — its
+  semantic features transfer to a structurally-different document, exactly the private-set
+  challenge. Still not "strong" absolutely (FREUID 0.82), but the best, and **orthogonal to the
+  CNN/low-level features → the top fusion candidate.** Follow-up: ViT-L/14 (UnivFD's backbone,
+  usually stronger; the 1.7 GB download died on this box's flaky link) may push it higher.
+- **Still on the list:** forgery *localization* (SAFIRE / SAM, 2025; DocForge-Bench, 2026) —
+  predict the tampered *region*; apt since manipulations are local, but needs region labels we
+  mostly lack (IDNet may provide some).
 - Sources: NPR arXiv:2312.10461 · UnivFD arXiv:2508.01603 · C2P-CLIP arXiv:2408.09647 ·
   DocForge-Bench arXiv:2603.01433 · ID-card PAD review arXiv:2511.06056.
 

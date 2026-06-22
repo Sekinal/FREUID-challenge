@@ -48,6 +48,8 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 | Forensic features (66) in-dist vs LOTO AUC | 0.995 vs **0.452** → not OOD-robust standalone (ELA strongest) |
 | Spectral (FFT) fingerprint cross-type corr | **+0.06** → no universal generation fingerprint |
 | Normalised spectral shape LOTO AUC | **0.63–0.65** (vs 0.452 scalar) → transfers better; fusion candidate |
+| **CLIP frozen + linear probe LOTO AUC** (UnivFD) | **0.686** → best single-feature OOD; linear>GBM; handles unseen ID type |
+| NPR (CVPR2024 up-sampling) LOTO AUC | ~0.50 → wrong paradigm (localized doc fraud ≠ whole-image GenAI) |
 
 ## Documents
 
