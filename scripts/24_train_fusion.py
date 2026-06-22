@@ -143,8 +143,12 @@ def main():
           f"test={len(test) if test is not None else 0:,} "
           f"fraud-rate train={train[config.LABEL_COL].mean():.3f}")
 
-    train_feats = get_features(train, args)
-    val_feats = get_features(val, args)
+    if args.no_fusion:   # backbone ignores the streams -> skip extraction entirely
+        train_feats = np.zeros((len(train), fusion.FUSION_DIM), np.float32)
+        val_feats = np.zeros((len(val), fusion.FUSION_DIM), np.float32)
+    else:
+        train_feats = get_features(train, args)
+        val_feats = get_features(val, args)
 
     cfg = fusion.FusionConfig(backbone=args.backbone, img_size=args.img_size,
                               epochs=args.epochs, batch_size=args.batch_size,
@@ -156,7 +160,9 @@ def main():
     # val first -> checkpoint selection uses val AuDET (never peeks at any held-out test)
     eval_sets = {"val": (val, val_feats)}
     if test is not None:
-        eval_sets["test"] = (test, get_features(test, args))
+        test_feats = (np.zeros((len(test), fusion.FUSION_DIM), np.float32)
+                      if args.no_fusion else get_features(test, args))
+        eval_sets["test"] = (test, test_feats)
     res = fusion.train_fusion(train, train_feats, eval_sets, cfg, save_name=f"fusion_{tag}")
     res["tag"] = tag
     io.save_json(f"fusion_result_{tag}.json", res)
