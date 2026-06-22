@@ -1,0 +1,43 @@
+{
+  "n": 24000,
+  "loto": {
+    "clip": {
+      "mean_auc": 0.6862423090277777,
+      "mean_freuid": 0.8240470344572692,
+      "per_type": {
+        "BENIN/DL": 0.539,
+        "EGYPT/DL": 0.652,
+        "GUINEA/DL": 0.848,
+        "MAURITIUS/ID": 0.806,
+        "MOZAMBIQUE/DL": 0.587
+      }
+    },
+    "region": {
+      "mean_auc": 0.657170451388889,
+      "mean_freuid": 0.7735765010609901,
+      "per_type": {
+        "BENIN/DL": 0.587,
+        "EGYPT/DL": 0.686,
+        "GUINEA/DL": 0.571,
+        "MAURITIUS/ID": 0.942,
+        "MOZAMBIQUE/DL": 0.5
+      }
+    },
+    "clip+region": {
+      "mean_auc": 0.6665674826388889,
+      "mean_freuid": 0.8415671489836741,
+      "per_type": {
+        "BENIN/DL": 0.523,
+        "EGYPT/DL": 0.653,
+        "GUINEA/DL": 0.837,
+        "MAURITIUS/ID": 0.82,
+        "MOZAMBIQUE/DL": 0.5
+      }
+    }
+  },
+  "refs": {
+    "clip": 0.686,
+    "region": 0.657,
+    "spectral": 0.646
+  }
+}

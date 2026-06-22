@@ -242,10 +242,18 @@ Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapes
   0.942, FREUID 0.22** (vs forensics' 0.19-inversion there). The substrate was the whole point:
   low-level noise at high res carries the tamper trace; coarse semantic CLIP patches (scripts/20)
   do not. Confirms the user's local-region intuition — done right.
-- **Orthogonal to CLIP ⇒ fuse them.** Per-type, region-noise wins MAURITIUS/ID 0.94 vs CLIP 0.81,
-  CLIP wins GUINEA 0.85 vs 0.57; they split the rest. Two complementary transferable signals
-  (CLIP = global semantic, region-noise = local low-level self-referential). **Next: fuse
-  CLIP ⊕ region-noise (⊕ spectral) in one probe, then as extra streams into EffNetV2.**
+- **Orthogonal to CLIP, but naive fusion does NOT stack** (`scripts/22`, n=24k). Per-type the
+  two split wins (region-noise MAURITIUS/ID 0.94 vs CLIP 0.81; CLIP GUINEA 0.85 vs 0.57), so
+  concatenation *should* help — but **CLIP⊕region = 0.667 < CLIP-alone 0.686.** Why: 768 CLIP
+  dims swamp the 27 region dims in a linear/L2 probe, so region's standout (MAURITIUS 0.94)
+  collapses to 0.82 in the fusion. **Lesson: the complementarity is real but a dumb linear
+  combiner can't exploit it — it needs *learned per-type/per-region gating*, i.e. these belong
+  as input *streams to a trained model* (EffNetV2), not concatenated frozen features.** Late
+  fusion (score averaging) is unlikely to help either (region drags GUINEA down).
+- **Conclusion of the probe sweep:** best simple OOD signal = **CLIP-frozen 0.686**; region-noise
+  is a strong *complement specifically for unseen structurally-different types* (0.94 on the ID).
+  No frozen-feature combination beats CLIP. Real gains now require (a) a *trained* model that can
+  gate these streams, and (b) more diverse data. Probing has hit diminishing returns.
 - **Still on the list:** forgery *localization* (SAFIRE / SAM, 2025; DocForge-Bench, 2026) —
   supervised tampered-region prediction; needs region labels we mostly lack (IDNet may provide).
 - Sources: NPR arXiv:2312.10461 · UnivFD arXiv:2508.01603 · C2P-CLIP arXiv:2408.09647 ·
