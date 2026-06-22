@@ -17,6 +17,10 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
   gap that is the whole game (the digital→captured shift, confirmed by a real submission).
 - Validation is now **leakage-safe** (group-stratified by near-duplicate component) and the
   FREUID metric is **vectorized (~1130× faster, bit-identical)**.
+- A second-box experiment line (branch **`aux-modeling`**) found the **dominant lever for OOD:
+  mixing in external fraud data (IDNet-2025)** — a cross-country no-aux model scores 0.98,
+  with 30k IDNet aux it drops to **0.3556**. Best backbone so far: EffNetV2-M + domain aug +
+  focal. The two branches should be unified (see [`04`](04-results-and-open-questions.md)).
 
 ## Key numbers
 
@@ -30,8 +34,10 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 | Train↔public_test near-dup leaks | ~1,505 (~19% of public test) |
 | Split groups | 64,135 (all partitions fraud-rate 0.423) |
 | Baseline in-dist val/test FREUID | ~0.0001 |
-| Baseline **public LB** (same types, held-out) | **0.291** |
+| Baseline **public LB** (same types, held-out) | **0.291** (0.29127; was 0.333) |
 | → in-dist vs public gap | ~0.29 (the digital→captured shift, made real) |
+| Best **cross-country OOD** FREUID (`aux-modeling`) | **0.3556** (EffNetV2-M + domain aug + focal + 30k IDNet aux) |
+| No-aux cross-country FREUID (ablation) | 0.9809 → **IDNet aux is the dominant lever** |
 
 ## Documents
 
@@ -40,8 +46,19 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 - [`03-competition-and-strategy.md`](03-competition-and-strategy.md) — host's OOD design, public/private, what to build.
 - [`04-results-and-open-questions.md`](04-results-and-open-questions.md) — runs, scores, TODO.
 
+## Branches
+
+- **`main`** — leakage-safe stratified-group splits, LOTO/`iter_type_holdout` support,
+  vectorized metric, tests, these docs. The solid *infrastructure*. Public LB 0.291.
+- **`aux-modeling`** — second-box line of work, forked from `7d8aeb4`. IDNet-2025 aux
+  mix-in, multi-arch sweep, focal loss, **cross-country OOD eval** (real 0.3556). The
+  better *experiments*, on older (non-leakage-safe) splits. See
+  [`04`](04-results-and-open-questions.md). Next step is to unify the two.
+
 ## Environment
 
-- Box: `ssh root@216.81.248.172 -p 40299`, repo + full data at `/root/freuid`.
-- Run with `.venv/bin/python` (no `uv` on the box). GPU: A100-80GB.
+- Boxes (both A100-80GB, run with `.venv/bin/python`, no `uv`):
+  - `ssh root@154.54.100.217 -p 40299` — **current** working box (`aux-modeling`), full data
+    + IDNet aux at `/root/freuid`.
+  - `ssh root@216.81.248.172 -p 40299` — original box (`main` work). May be retired.
 - Repo: `github.com/Sekinal/FREUID-challenge` (push from local with the user's creds).
