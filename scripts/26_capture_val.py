@@ -29,7 +29,7 @@ from PIL import Image, ImageFilter
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from freuid import config, data, fusion, io, metrics, validation  # noqa: E402
+from freuid import aux_data, config, data, fusion, io, metrics, validation  # noqa: E402
 
 
 def make_degrade(jpeg: int, scale: float, blur: float):
@@ -57,7 +57,19 @@ def parse_args():
     p.add_argument("--blur", type=float, default=1.0)
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--workers", type=int, default=12)
+    p.add_argument("--eval-scanned", action="store_true",
+                   help="evaluate on REAL print-captured scanned-IDNet (held-out tail) instead")
+    p.add_argument("--scanned-root", default="data/aux/idnet2025_scanned")
     return p.parse_args()
+
+
+def scanned_val(n):
+    """Held-out tail of the scanned (real print-captured) IDNet set = real capture proxy."""
+    a = aux_data.load_idnet_frame([config.REPO_ROOT / "data/aux/idnet2025_scanned"])
+    a = a.sample(frac=1.0, random_state=0).reset_index(drop=True)
+    a = a.tail(n).reset_index(drop=True)          # tail = reserved for validation, not training
+    a = a[a["abs_path"].map(lambda p: Path(p).exists())].reset_index(drop=True)
+    return a
 
 
 def heldout_val(n):
@@ -91,10 +103,22 @@ def main():
     model = fusion.FusionModel(cfgd.get("backbone", "tf_efficientnetv2_m.in21k_ft_in1k"),
                                use_fusion=use_fusion, pretrained=False).to(dev)
     model.load_state_dict(ckpt["model"]); model.eval()
+
+    if args.eval_scanned:
+        frame = scanned_val(args.n)
+        print(f"[capval] {args.checkpoint}  use_fusion={use_fusion}  "
+              f"REAL captured scanned-IDNet n={len(frame):,} fraud-rate={frame[config.LABEL_COL].mean():.3f}")
+        m = evaluate(frame, model, dev, use_fusion, None, args)   # already captured, no degrade
+        print(f"[capval] SCANNED(real capture) FREUID={m.freuid:.4f}  AuDET={m.audet:.4f}  "
+              f"APCER@1%={m.apcer_at_1pct_bpcer:.4f}")
+        io.save_json(f"capval_scanned_{Path(args.checkpoint).stem}.json",
+                     {"checkpoint": args.checkpoint, "use_fusion": use_fusion,
+                      "scanned_freuid": m.freuid, "scanned_audet": m.audet, "n": len(frame)})
+        return
+
     frame = heldout_val(args.n)
     print(f"[capval] {args.checkpoint}  use_fusion={use_fusion}  n={len(frame):,}  "
           f"degrade(jpeg={args.jpeg},scale={args.scale},blur={args.blur})")
-
     degrade = make_degrade(args.jpeg, args.scale, args.blur)
     m_clean = evaluate(frame, model, dev, use_fusion, None, args)
     m_deg = evaluate(frame, model, dev, use_fusion, degrade, args)
