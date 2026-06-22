@@ -66,10 +66,9 @@ def parse_args():
 def scanned_val(n):
     """Held-out tail of the scanned (real print-captured) IDNet set = real capture proxy."""
     a = aux_data.load_idnet_frame([config.REPO_ROOT / "data/aux/idnet2025_scanned"])
+    a = a[a["abs_path"].map(lambda p: Path(p).exists())]            # filter first (matches scripts/24)
     a = a.sample(frac=1.0, random_state=0).reset_index(drop=True)
-    a = a.tail(n).reset_index(drop=True)          # tail = reserved for validation, not training
-    a = a[a["abs_path"].map(lambda p: Path(p).exists())].reset_index(drop=True)
-    return a
+    return a.tail(n).reset_index(drop=True)         # tail = reserved for validation, not training
 
 
 def heldout_val(n):

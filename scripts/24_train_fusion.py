@@ -35,6 +35,9 @@ def parse_args():
     p.add_argument("--aux", action="store_true", help="mix in IDNet-2025 aux data")
     p.add_argument("--aux-roots", default="data/aux/idnet2025")
     p.add_argument("--max-aux", type=int, default=30000)
+    p.add_argument("--scanned-aux", default="", help="real captured scanned-IDNet root to mix in")
+    p.add_argument("--max-scanned", type=int, default=50000)
+    p.add_argument("--scanned-val-tail", type=int, default=6000, help="held out for scripts/26 proxy")
     p.add_argument("--loto-type", default="", help="hold this FREUID type out of train -> test")
     p.add_argument("--train-all", action="store_true", help="train on all 5 types (submission model)")
     p.add_argument("--no-fusion", action="store_true", help="ablation: backbone only")
@@ -119,7 +122,22 @@ def main():
         if args.smoke:
             aux = aux.sample(min(len(aux), 800), random_state=0).reset_index(drop=True)
         train = pd.concat([train, aux], ignore_index=True)
-        print(f"[aux] mixed in {len(aux):,} IDNet rows -> train={len(train):,}")
+        print(f"[aux] mixed in {len(aux):,} digital IDNet rows -> train={len(train):,}")
+
+    # real print-captured scanned IDNet -> directly teaches the capture distribution.
+    # Reserve the shuffled TAIL (matches scripts/26 --eval-scanned) as a clean val proxy.
+    if args.scanned_aux:
+        sc = aux_data.load_idnet_frame([config.REPO_ROOT / args.scanned_aux])
+        sc = sc[sc["abs_path"].map(lambda p: Path(p).exists())]
+        sc = sc.sample(frac=1.0, random_state=0).reset_index(drop=True)
+        sc_train = sc.head(len(sc) - args.scanned_val_tail)        # tail reserved for val
+        if args.max_scanned and len(sc_train) > args.max_scanned:
+            sc_train = sc_train.sample(args.max_scanned, random_state=1).reset_index(drop=True)
+        if args.smoke:
+            sc_train = sc_train.sample(min(len(sc_train), 800), random_state=0).reset_index(drop=True)
+        train = pd.concat([train, sc_train], ignore_index=True)
+        print(f"[scanned] mixed in {len(sc_train):,} REAL captured rows "
+              f"(reserved {args.scanned_val_tail:,} tail for val) -> train={len(train):,}")
 
     print(f"[data] train={len(train):,} val={len(val):,} "
           f"test={len(test) if test is not None else 0:,} "
@@ -134,7 +152,7 @@ def main():
                               num_workers=args.workers)
     tag = ("nofusion" if args.no_fusion else "fusion") + (
         f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type
-        else ("_all" if args.train_all else ""))
+        else ("_all" if args.train_all else "")) + ("_scanned" if args.scanned_aux else "")
     # val first -> checkpoint selection uses val AuDET (never peeks at any held-out test)
     eval_sets = {"val": (val, val_feats)}
     if test is not None:
