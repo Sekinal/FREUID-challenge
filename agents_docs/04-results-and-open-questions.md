@@ -70,6 +70,22 @@ So, in priority order, the levers that actually move the OOD number:
 | 53954497 | EffNetV2-M **all-5** + domain aug + focal + IDNet aux | 0.20744 |
 | 53958821 | **Fusion** EffNetV2 + CLIP + region-noise (all-5 + IDNet) | 0.22477 (fusion hurts) |
 | 53959179 | **No-fusion** EffNetV2 all-5 (scripts/24 capture-aug + focal + IDNet) | **0.18695 → rank 53/109 (best)** |
+| 53960157 | No-fusion + **50k real captured (scanned) IDNet** | 0.22069 (captured IDNet HURTS FREUID) |
+
+### Validation is the hard part: no local proxy predicts the FREUID capture shift
+- **Digital / held-out-type val saturates** (~0) — a trained CNN keys on the type-invariant
+  *digital* fraud artifact, so type-holdout is free and in-dist is near-perfect. Useless proxy.
+- **Simulated capture augmentation doesn't break it** — degrading a digital val image
+  (JPEG q20 / 0.4 scale / blur 2) still gives FREUID 0.001; the manipulation artifact survives
+  degradation, while real captured fraud *lacks* it. Useless proxy.
+- **Held-out *captured IDNet* gives a FALSE POSITIVE** — the digital model scores 0.98 there
+  (blind to captured fraud); training on 50k captured IDNet drops it to **0.34** (looks great)
+  but the public LB got **worse** (0.187 → 0.221). The proxy is in-distribution (IDNet→IDNet)
+  and does **not** transfer to captured FREUID. Misleading proxy.
+- **Conclusion: there is no trustworthy local validation for the capture shift with our data**
+  (we have ~20 captured FREUID images of 69k). The public LB is the only ground truth. Be
+  judicious with submissions; the digital-only 0.187 may be near the ceiling without real
+  captured *FREUID* examples.
 
 **Standing (public LB, 109 teams):** best = **0.20744 → rank 59/109**, up from ~86 with the
 0.291 baseline. The 30k-IDNet-aux EffNetV2-M moved us **+27 places**. Note the all-5 model
