@@ -15,7 +15,8 @@ cleverer feature.** Evidence:
 | FFT cross-type fingerprint corr | — | **+0.06** | no universal generation signature |
 | Normalised spectral *shape* | — | AUC **0.63–0.65** | transfers better; fusion candidate |
 | **NPR** (CVPR 2024, up-sampling artifacts) | — | AUC **0.49–0.53** (chance) | wrong paradigm (see below) |
-| **CLIP frozen + linear probe** (UnivFD) | — | AUC **0.686** | **best single-feature OOD**; semantic, fusion candidate |
+| **CLIP frozen + linear probe** (UnivFD) | — | AUC **0.686** | best *global semantic* OOD; fusion candidate |
+| **Region-noise inconsistency** (self-referential) | — | AUC **0.657** | **0.94 on unseen ID type**; orthogonal to CLIP; fusion candidate |
 
 So, in priority order, the levers that actually move the OOD number:
 1. **More + more *diverse* external fraud data** — the only thing that attacks type-entanglement
@@ -232,11 +233,19 @@ Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapes
   digit/date is far below patch resolution; (3) good forgeries are *semantically consistent* (a
   swapped face still reads "face"), so a semantic encoder sees nothing. **The self-referential
   framing is the keeper; it needs a low-level high-res substrate.**
-- **Most promising untested idea: high-res intra-image *noise/forensic* inconsistency.** Apply
-  the self-referential region comparison to **noise residuals at native resolution** (where a
-  tamper leaves a statistical trace and is actually visible), not coarse semantic patches —
-  i.e. weakly-supervised forgery localization via noiseprint inconsistency. Type-agnostic by
-  construction; the right realization of the local-region idea.
+- **High-res intra-image noise inconsistency — the local idea on the RIGHT substrate**
+  (`scripts/21`, n=24k). Same self-referential framing as scripts/20, but on **noise residuals
+  at 1024px native** (tiled 32×32; robust-z of the most-outlier tile vs the image's own
+  distribution and vs its spatial neighbours). 27 features, no model. **Result: mean LOTO AUC
+  0.657** (per type 0.59 / 0.69 / 0.57 / **0.94** / 0.50) — beats spectral (0.646), approaches
+  CLIP (0.686), and is the **best single result on any unseen type** so far: **MAURITIUS/ID AUC
+  0.942, FREUID 0.22** (vs forensics' 0.19-inversion there). The substrate was the whole point:
+  low-level noise at high res carries the tamper trace; coarse semantic CLIP patches (scripts/20)
+  do not. Confirms the user's local-region intuition — done right.
+- **Orthogonal to CLIP ⇒ fuse them.** Per-type, region-noise wins MAURITIUS/ID 0.94 vs CLIP 0.81,
+  CLIP wins GUINEA 0.85 vs 0.57; they split the rest. Two complementary transferable signals
+  (CLIP = global semantic, region-noise = local low-level self-referential). **Next: fuse
+  CLIP ⊕ region-noise (⊕ spectral) in one probe, then as extra streams into EffNetV2.**
 - **Still on the list:** forgery *localization* (SAFIRE / SAM, 2025; DocForge-Bench, 2026) —
   supervised tampered-region prediction; needs region labels we mostly lack (IDNet may provide).
 - Sources: NPR arXiv:2312.10461 · UnivFD arXiv:2508.01603 · C2P-CLIP arXiv:2408.09647 ·
