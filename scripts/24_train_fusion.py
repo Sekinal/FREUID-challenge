@@ -36,6 +36,7 @@ def parse_args():
     p.add_argument("--aux-roots", default="data/aux/idnet2025")
     p.add_argument("--max-aux", type=int, default=30000)
     p.add_argument("--loto-type", default="", help="hold this FREUID type out of train -> test")
+    p.add_argument("--train-all", action="store_true", help="train on all 5 types (submission model)")
     p.add_argument("--no-fusion", action="store_true", help="ablation: backbone only")
     p.add_argument("--loss", default="focal", choices=["focal", "bce"])
     p.add_argument("--workers", type=int, default=12)
@@ -93,10 +94,20 @@ def main():
         print(f"[loto] held out {args.loto_type}: test={len(test):,}  "
               f"train={len(train):,}  val={len(val):,}")
 
+    # train-all: use every labeled FREUID image (all types) for a submission model
+    if args.train_all:
+        full = pd.concat([train, val, test], ignore_index=True)
+        val = full.sample(min(5000, max(1, len(full) // 10)), random_state=0)
+        train = full.drop(val.index).reset_index(drop=True)
+        val = val.reset_index(drop=True)
+        test = None
+        print(f"[train-all] train={len(train):,} val={len(val):,} (all 5 types, submission model)")
+
     if args.smoke:
         train = train.sample(min(len(train), 1500), random_state=0).reset_index(drop=True)
         val = val.sample(min(len(val), 600), random_state=0).reset_index(drop=True)
-        test = test.sample(min(len(test), 600), random_state=0).reset_index(drop=True)
+        if test is not None:
+            test = test.sample(min(len(test), 600), random_state=0).reset_index(drop=True)
         args.epochs = 1
 
     if args.aux:
@@ -110,21 +121,24 @@ def main():
         train = pd.concat([train, aux], ignore_index=True)
         print(f"[aux] mixed in {len(aux):,} IDNet rows -> train={len(train):,}")
 
-    print(f"[data] train={len(train):,} val={len(val):,} test={len(test):,} "
+    print(f"[data] train={len(train):,} val={len(val):,} "
+          f"test={len(test) if test is not None else 0:,} "
           f"fraud-rate train={train[config.LABEL_COL].mean():.3f}")
 
     train_feats = get_features(train, args)
     val_feats = get_features(val, args)
-    test_feats = get_features(test, args)
 
     cfg = fusion.FusionConfig(backbone=args.backbone, img_size=args.img_size,
                               epochs=args.epochs, batch_size=args.batch_size,
                               use_fusion=not args.no_fusion, loss_type=args.loss,
                               num_workers=args.workers)
     tag = ("nofusion" if args.no_fusion else "fusion") + (
-        f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type else "")
-    # val first -> checkpoint selection uses val AuDET (never peeks at the held-out test type)
-    eval_sets = {"val": (val, val_feats), "test": (test, test_feats)}
+        f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type
+        else ("_all" if args.train_all else ""))
+    # val first -> checkpoint selection uses val AuDET (never peeks at any held-out test)
+    eval_sets = {"val": (val, val_feats)}
+    if test is not None:
+        eval_sets["test"] = (test, get_features(test, args))
     res = fusion.train_fusion(train, train_feats, eval_sets, cfg, save_name=f"fusion_{tag}")
     res["tag"] = tag
     io.save_json(f"fusion_result_{tag}.json", res)
