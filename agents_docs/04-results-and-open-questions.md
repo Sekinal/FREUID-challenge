@@ -18,6 +18,23 @@ cleverer feature.** Evidence:
 | **CLIP frozen + linear probe** (UnivFD) | — | AUC **0.686** | best *global semantic* OOD; fusion candidate |
 | **Region-noise inconsistency** (self-referential) | — | AUC **0.657** | **0.94 on unseen ID type**; orthogonal to CLIP; fusion candidate |
 
+**The fusion model was built and tested on the real public LB — it does NOT help (it hurts).**
+Apples-to-apples, same `scripts/24` recipe (all-5 + capture-aug + focal + 30k IDNet, train-all
+94k, EffNetV2-M):
+
+| Public LB | model |
+|---|---|
+| **0.18695 (rank 53/109)** | **no-fusion (EffNetV2 backbone alone) — new best** |
+| 0.22477 | fusion (+ frozen-CLIP 768 + region-noise 27 at a gated head) |
+| 0.20744 | prior best `f3` (EffNetV2 all-5, albumentations domain-aug) |
+
+The CLIP/region streams that transferred across document *types* on frozen probes **mislead under
+the capture shift**: they are computed on *clean* images, so on the *captured* public test they are
+OOD and a head that learned to trust them degrades, while the backbone (fed capture-augmented
+images) stays robust. **Conclusion: feature fusion is a dead end here; the lever is data +
+capture-robustness.** Bonus: the no-fusion `scripts/24` recipe is a new best (0.187, up from 0.207 →
+rank 59→53), because torchvision capture-aug + train-all generalize to captured images better.
+
 So, in priority order, the levers that actually move the OOD number:
 1. **More + more *diverse* external fraud data** — the only thing that attacks type-entanglement
    head-on (IDNet gave the one 3× win). Highest expected payoff.
@@ -50,7 +67,9 @@ So, in priority order, the levers that actually move the OOD number:
 | 53623661 | earlier type-holdout b2 (epoch2) | 0.333 |
 | 53627140 | leakage-safe b2 (3 epoch) | 0.291 |
 | 53954498 | EffNetV2-M **3-country** + domain aug + focal + IDNet aux | 0.30353 |
-| 53954497 | EffNetV2-M **all-5** + domain aug + focal + IDNet aux | **0.20744** |
+| 53954497 | EffNetV2-M **all-5** + domain aug + focal + IDNet aux | 0.20744 |
+| 53958821 | **Fusion** EffNetV2 + CLIP + region-noise (all-5 + IDNet) | 0.22477 (fusion hurts) |
+| 53959179 | **No-fusion** EffNetV2 all-5 (scripts/24 capture-aug + focal + IDNet) | **0.18695 → rank 53/109 (best)** |
 
 **Standing (public LB, 109 teams):** best = **0.20744 → rank 59/109**, up from ~86 with the
 0.291 baseline. The 30k-IDNet-aux EffNetV2-M moved us **+27 places**. Note the all-5 model
