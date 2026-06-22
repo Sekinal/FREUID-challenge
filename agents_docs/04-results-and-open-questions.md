@@ -14,6 +14,7 @@ cleverer feature.** Evidence:
 | 66 scalar forensic features | AUC 0.995 | AUC **0.452** (below chance) | features memorise type |
 | FFT cross-type fingerprint corr | — | **+0.06** | no universal generation signature |
 | Normalised spectral *shape* | — | AUC **0.63–0.65** | transfers better; fusion candidate |
+| **NPR** (CVPR 2024, up-sampling artifacts) | — | AUC **0.49–0.53** (chance) | wrong paradigm (see below) |
 
 So, in priority order, the levers that actually move the OOD number:
 1. **More + more *diverse* external fraud data** — the only thing that attacks type-entanglement
@@ -194,6 +195,29 @@ Takeaways:
   type-entangled.** Dominant lever stays diverse data (IDNet); normalised-spectral fusion is a
   secondary, genuinely-transferable signal to stack on the CNN.
 - Artifacts: `artifacts/spectral_fingerprint.json` (+ `spectral_means.npz`, git-ignored).
+
+## Recent-literature techniques tried (and why most don't fit)
+
+Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapest, most apt:
+
+- **NPR — "Rethinking Up-Sampling Operations", CVPR 2024** (`scripts/18`, GPU). NPR =
+  `x − nearest_upsample(x[::2,::2])` on native pixels (no resize) — the generator up-sampling
+  fingerprint, SOTA across 28 unseen GAN/diffusion models. On FREUID it is **chance** (LOTO AUC
+  0.49–0.53 across magnitude-stats, NPR-spectrum, and combined; n=3,000 balanced, proper LOTO).
+  **Why it fails here:** NPR detects *whole-image* generative synthesis, but FREUID fraud is
+  *localized* document manipulation + print-and-capture. There is no global up-sampling fingerprint,
+  and any capture-resampling artifact is shared by fraud and genuine. The off-the-shelf
+  "AI-generated-image detector" paradigm is a category mismatch for document fraud.
+- **Still on the list (genuinely different hypotheses):**
+  - **CLIP frozen-feature probe** (UnivFD; C2P-CLIP / FatFormer, 2024) — frozen CLIP-ViT
+    clusters real images, fakes are outliers; the cross-generator winner. Must stay *frozen*
+    (fine-tuning ⇒ catastrophic forgetting). Tests a *semantic, type-general* representation,
+    unlike all the low-level transforms above. **Best next probe.**
+  - **Forgery *localization*** (SAFIRE / SAM-based, 2025; DocForge-Bench, 2026) — predict the
+    tampered *region*. Apt because the manipulations are local, but needs region labels we
+    don't have (IDNet may provide some).
+- Sources: NPR arXiv:2312.10461 · UnivFD arXiv:2508.01603 · C2P-CLIP arXiv:2408.09647 ·
+  DocForge-Bench arXiv:2603.01433 · ID-card PAD review arXiv:2511.06056.
 
 ## Leave-one-type-out (LOTO)
 
