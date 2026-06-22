@@ -43,8 +43,8 @@ RGRID = RCROP // RTILE
 # Frozen feature extraction (CLIP + region-noise), mirrors scripts/19 & 21
 # ==========================================================================
 class _ExtractDS(Dataset):
-    def __init__(self, paths, clip_tf):
-        self.paths, self.clip_tf = paths, clip_tf
+    def __init__(self, paths, clip_tf, pre=None):
+        self.paths, self.clip_tf, self.pre = paths, clip_tf, pre
 
     def __len__(self):
         return len(self.paths)
@@ -52,6 +52,8 @@ class _ExtractDS(Dataset):
     def __getitem__(self, i):
         try:
             img = Image.open(self.paths[i]); img.load(); rgb = img.convert("RGB")
+            if self.pre is not None:
+                rgb = self.pre(rgb)          # e.g. capture degradation (PIL->PIL)
             clip_t = self.clip_tf(rgb)
             g = rgb.convert("L"); w, h = g.size; s = min(RCROP, w, h)
             g = g.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s))
@@ -98,15 +100,19 @@ def _region_batch(x, gk, lapk):
     return torch.cat([_selfref(vm), _selfref(mm), _selfref(lm)], 1)
 
 
-def extract_fusion_features(paths, device=None, batch_size=128, workers=12, log_every=8192):
-    """Return (X[n, 795] float32, keep[n] bool) = [CLIP768 | region27] per path."""
+def extract_fusion_features(paths, device=None, batch_size=128, workers=12, log_every=8192, pre=None):
+    """Return (X[n, 795] float32, keep[n] bool) = [CLIP768 | region27] per path.
+
+    ``pre`` is an optional PIL->PIL transform applied to each image before feature
+    extraction (e.g. capture degradation, to match a captured test condition).
+    """
     dev = device or ("cuda" if torch.cuda.is_available() else "cpu")
     clip = timm.create_model(CLIP_MODEL, pretrained=True, num_classes=0).eval().to(dev)
     for p in clip.parameters():
         p.requires_grad_(False)
     cfg = timm.data.resolve_model_data_config(clip)
     tf = timm.data.create_transform(**cfg, is_training=False)
-    loader = DataLoader(_ExtractDS(list(paths), tf), batch_size=batch_size,
+    loader = DataLoader(_ExtractDS(list(paths), tf, pre=pre), batch_size=batch_size,
                         num_workers=workers, pin_memory=(dev == "cuda"))
     gk = _gauss(dev)
     lapk = torch.tensor([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=torch.float32,
