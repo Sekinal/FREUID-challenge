@@ -21,6 +21,12 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
   mixing in external fraud data (IDNet-2025)** — a cross-country no-aux model scores 0.98,
   with 30k IDNet aux it drops to **0.3556**. Best backbone so far: EffNetV2-M + domain aug +
   focal. The two branches should be unified (see [`04`](04-results-and-open-questions.md)).
+- **Hand-crafted forensic features (statistical noise analysis) tested and *do not* beat the
+  vision models on the OOD axis** (`freuid/forensics.py`, 66 features): in-distribution AUC
+  **0.995** but leave-one-type-out AUC **0.452** (below chance) — fraud signatures are
+  type-specific, so raw forensics → GBM collapse on unseen types. ELA is the strongest family
+  (within-type AUC up to 0.995) but no feature is universal. Only credible use is **fusion**
+  into the CNN, not a standalone model. Details in [`04`](04-results-and-open-questions.md).
 
 ## Key numbers
 
@@ -39,6 +45,7 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 | Best **cross-country OOD** FREUID (`aux-modeling`) | **0.3556** (EffNetV2-M + domain aug + focal + 30k IDNet aux) |
 | No-aux cross-country FREUID (ablation) | 0.9809 → **IDNet aux is the dominant lever** |
 | **Best public LB** (EffNetV2-M all-5 + aug + focal + IDNet aux) | **0.20744 → rank 59/109** (was ~86 at 0.291) |
+| Forensic features (66) in-dist vs LOTO AUC | 0.995 vs **0.452** → not OOD-robust standalone (ELA strongest) |
 
 ## Documents
 
