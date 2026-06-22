@@ -1,0 +1,537 @@
+{
+  "n_images": 69352,
+  "n_features": 66,
+  "fraud_rate": 0.4231601107394163,
+  "top_features": [
+    "ela_max",
+    "dct_benford_chi2",
+    "ela_std",
+    "ela_p99",
+    "col_sat_std",
+    "dct_zero_frac",
+    "meta_bits_per_pixel",
+    "ela_frac_high",
+    "col_frac_dark",
+    "spec_hf_lf_ratio",
+    "spec_slope",
+    "spec_radial_2",
+    "spec_radial_12",
+    "res_tilevar_iqr",
+    "col_gray_std"
+  ],
+  "per_feature": [
+    {
+      "name": "ela_max",
+      "auc": 0.5576053065776223,
+      "auc_raw": 0.5576053065776223,
+      "direction": "fraud_high",
+      "mutual_info": 0.07071516469216732
+    },
+    {
+      "name": "dct_benford_chi2",
+      "auc": 0.5564746274708983,
+      "auc_raw": 0.44352537252910174,
+      "direction": "fraud_low",
+      "mutual_info": 0.023545182007721488
+    },
+    {
+      "name": "ela_std",
+      "auc": 0.5552490540174965,
+      "auc_raw": 0.44475094598250353,
+      "direction": "fraud_low",
+      "mutual_info": 0.18011529029983153
+    },
+    {
+      "name": "ela_p99",
+      "auc": 0.5457644292912973,
+      "auc_raw": 0.45423557070870274,
+      "direction": "fraud_low",
+      "mutual_info": 0.024560256236048295
+    },
+    {
+      "name": "col_sat_std",
+      "auc": 0.5435154958374947,
+      "auc_raw": 0.5435154958374947,
+      "direction": "fraud_high",
+      "mutual_info": 0.07721865196661004
+    },
+    {
+      "name": "dct_zero_frac",
+      "auc": 0.5389482608332595,
+      "auc_raw": 0.46105173916674047,
+      "direction": "fraud_low",
+      "mutual_info": 0.016577139302988098
+    },
+    {
+      "name": "meta_bits_per_pixel",
+      "auc": 0.5371138345499432,
+      "auc_raw": 0.5371138345499432,
+      "direction": "fraud_high",
+      "mutual_info": 0.04626649584003251
+    },
+    {
+      "name": "ela_frac_high",
+      "auc": 0.5363079278599222,
+      "auc_raw": 0.5363079278599222,
+      "direction": "fraud_high",
+      "mutual_info": 0.14601072688543004
+    },
+    {
+      "name": "col_frac_dark",
+      "auc": 0.5336692166554452,
+      "auc_raw": 0.4663307833445548,
+      "direction": "fraud_low",
+      "mutual_info": 0.05157808053959512
+    },
+    {
+      "name": "spec_hf_lf_ratio",
+      "auc": 0.5315251845606395,
+      "auc_raw": 0.5315251845606395,
+      "direction": "fraud_high",
+      "mutual_info": 0.01654655089749979
+    },
+    {
+      "name": "spec_slope",
+      "auc": 0.5311753254068784,
+      "auc_raw": 0.5311753254068784,
+      "direction": "fraud_high",
+      "mutual_info": 0.015596421342535027
+    },
+    {
+      "name": "spec_radial_2",
+      "auc": 0.5268341772472498,
+      "auc_raw": 0.4731658227527502,
+      "direction": "fraud_low",
+      "mutual_info": 0.0028830671977140288
+    },
+    {
+      "name": "spec_radial_12",
+      "auc": 0.525935287155109,
+      "auc_raw": 0.525935287155109,
+      "direction": "fraud_high",
+      "mutual_info": 0.010210478574424808
+    },
+    {
+      "name": "res_tilevar_iqr",
+      "auc": 0.5255562276441685,
+      "auc_raw": 0.4744437723558314,
+      "direction": "fraud_low",
+      "mutual_info": 0.016745054418651373
+    },
+    {
+      "name": "col_gray_std",
+      "auc": 0.5250499180497794,
+      "auc_raw": 0.47495008195022065,
+      "direction": "fraud_low",
+      "mutual_info": 0.0
+    },
+    {
+      "name": "col_g_std",
+      "auc": 0.5248023981327818,
+      "auc_raw": 0.47519760186721816,
+      "direction": "fraud_low",
+      "mutual_info": 0.00021498636199757115
+    },
+    {
+      "name": "spec_radial_14",
+      "auc": 0.5243850311466715,
+      "auc_raw": 0.5243850311466715,
+      "direction": "fraud_high",
+      "mutual_info": 0.007996438721971533
+    },
+    {
+      "name": "spec_radial_13",
+      "auc": 0.5239414449961397,
+      "auc_raw": 0.5239414449961397,
+      "direction": "fraud_high",
+      "mutual_info": 0.005980263051825752
+    },
+    {
+      "name": "spec_radial_10",
+      "auc": 0.5237531375297003,
+      "auc_raw": 0.5237531375297003,
+      "direction": "fraud_high",
+      "mutual_info": 0.0060712379996699095
+    },
+    {
+      "name": "col_r_mean",
+      "auc": 0.5227882114626632,
+      "auc_raw": 0.47721178853733687,
+      "direction": "fraud_low",
+      "mutual_info": 0.003426299723174875
+    },
+    {
+      "name": "res_skew",
+      "auc": 0.522780454399107,
+      "auc_raw": 0.47721954560089297,
+      "direction": "fraud_low",
+      "mutual_info": 0.007658887291216665
+    },
+    {
+      "name": "spec_radial_11",
+      "auc": 0.5223806176781826,
+      "auc_raw": 0.5223806176781826,
+      "direction": "fraud_high",
+      "mutual_info": 0.005360634147424159
+    },
+    {
+      "name": "res_tilevar_std",
+      "auc": 0.5205785990895684,
+      "auc_raw": 0.47942140091043156,
+      "direction": "fraud_low",
+      "mutual_info": 0.006545805658707549
+    },
+    {
+      "name": "col_r_std",
+      "auc": 0.5205217085622841,
+      "auc_raw": 0.4794782914377159,
+      "direction": "fraud_low",
+      "mutual_info": 0.008357661296349406
+    },
+    {
+      "name": "ela_mean",
+      "auc": 0.5203218728234498,
+      "auc_raw": 0.47967812717655023,
+      "direction": "fraud_low",
+      "mutual_info": 0.11736343360847612
+    },
+    {
+      "name": "spec_radial_15",
+      "auc": 0.5175450915093514,
+      "auc_raw": 0.5175450915093514,
+      "direction": "fraud_high",
+      "mutual_info": 0.0034808997515634044
+    },
+    {
+      "name": "meta_w",
+      "auc": 0.5173500048105804,
+      "auc_raw": 0.4826499951894196,
+      "direction": "fraud_low",
+      "mutual_info": 0.0028329941945230974
+    },
+    {
+      "name": "meta_megapix",
+      "auc": 0.5173500048105804,
+      "auc_raw": 0.4826499951894196,
+      "direction": "fraud_low",
+      "mutual_info": 0.007106534479363047
+    },
+    {
+      "name": "meta_h",
+      "auc": 0.5171421730868846,
+      "auc_raw": 0.48285782691311535,
+      "direction": "fraud_low",
+      "mutual_info": 0.0043089560013547246
+    },
+    {
+      "name": "col_b_skew",
+      "auc": 0.5169395286385876,
+      "auc_raw": 0.4830604713614124,
+      "direction": "fraud_low",
+      "mutual_info": 0.0047039572045830536
+    },
+    {
+      "name": "meta_aspect",
+      "auc": 0.5168114225269325,
+      "auc_raw": 0.5168114225269325,
+      "direction": "fraud_high",
+      "mutual_info": 0.004176838600172816
+    },
+    {
+      "name": "col_b_mean",
+      "auc": 0.5155576814866997,
+      "auc_raw": 0.48444231851330033,
+      "direction": "fraud_low",
+      "mutual_info": 0.00527427875965758
+    },
+    {
+      "name": "col_b_std",
+      "auc": 0.5153425948174852,
+      "auc_raw": 0.4846574051825148,
+      "direction": "fraud_low",
+      "mutual_info": 0.0036303249887112976
+    },
+    {
+      "name": "spec_peak_max",
+      "auc": 0.5149865858889491,
+      "auc_raw": 0.5149865858889491,
+      "direction": "fraud_high",
+      "mutual_info": 0.0017741476384642851
+    },
+    {
+      "name": "col_r_kurt",
+      "auc": 0.5146893200860542,
+      "auc_raw": 0.5146893200860542,
+      "direction": "fraud_high",
+      "mutual_info": 0.0035819046219989215
+    },
+    {
+      "name": "spec_radial_9",
+      "auc": 0.5141029126564141,
+      "auc_raw": 0.5141029126564141,
+      "direction": "fraud_high",
+      "mutual_info": 0.0076354702595740065
+    },
+    {
+      "name": "jpeg_grid_ratio",
+      "auc": 0.5137779771258786,
+      "auc_raw": 0.48622202287412136,
+      "direction": "fraud_low",
+      "mutual_info": 0.0015586508254814557
+    },
+    {
+      "name": "col_b_kurt",
+      "auc": 0.5133712189271397,
+      "auc_raw": 0.5133712189271397,
+      "direction": "fraud_high",
+      "mutual_info": 0.0012987166031073194
+    },
+    {
+      "name": "spec_peak_count",
+      "auc": 0.5128952370066768,
+      "auc_raw": 0.5128952370066768,
+      "direction": "fraud_high",
+      "mutual_info": 0.008268763098560727
+    },
+    {
+      "name": "spec_radial_6",
+      "auc": 0.5128763051550099,
+      "auc_raw": 0.5128763051550099,
+      "direction": "fraud_high",
+      "mutual_info": 0.0047981111312020985
+    },
+    {
+      "name": "dct_ac_kurt",
+      "auc": 0.5124146069808198,
+      "auc_raw": 0.5124146069808198,
+      "direction": "fraud_high",
+      "mutual_info": 0.0004870897670037344
+    },
+    {
+      "name": "col_r_skew",
+      "auc": 0.5122655251969198,
+      "auc_raw": 0.4877344748030802,
+      "direction": "fraud_low",
+      "mutual_info": 0.003295535769591851
+    },
+    {
+      "name": "col_gray_kurt",
+      "auc": 0.5119183627449506,
+      "auc_raw": 0.5119183627449506,
+      "direction": "fraud_high",
+      "mutual_info": 0.009331410937817752
+    },
+    {
+      "name": "dct_ac_std",
+      "auc": 0.5118272310894181,
+      "auc_raw": 0.4881727689105819,
+      "direction": "fraud_low",
+      "mutual_info": 0.0013655340210398936
+    },
+    {
+      "name": "col_gray_skew",
+      "auc": 0.5115236315295665,
+      "auc_raw": 0.4884763684704335,
+      "direction": "fraud_low",
+      "mutual_info": 0.0031689617910899415
+    },
+    {
+      "name": "jpeg_blockiness",
+      "auc": 0.5110525958337737,
+      "auc_raw": 0.5110525958337737,
+      "direction": "fraud_high",
+      "mutual_info": 0.00380824746930708
+    },
+    {
+      "name": "col_g_kurt",
+      "auc": 0.5099186553021725,
+      "auc_raw": 0.5099186553021725,
+      "direction": "fraud_high",
+      "mutual_info": 0.00617509672085248
+    },
+    {
+      "name": "col_sat_mean",
+      "auc": 0.5095589002919938,
+      "auc_raw": 0.5095589002919938,
+      "direction": "fraud_high",
+      "mutual_info": 0.07996590696435524
+    },
+    {
+      "name": "col_g_skew",
+      "auc": 0.5094203284902197,
+      "auc_raw": 0.4905796715097804,
+      "direction": "fraud_low",
+      "mutual_info": 0.003974620059937317
+    },
+    {
+      "name": "spec_radial_7",
+      "auc": 0.5090575454399682,
+      "auc_raw": 0.5090575454399682,
+      "direction": "fraud_high",
+      "mutual_info": 0.003762233507288215
+    },
+    {
+      "name": "res_lap_std",
+      "auc": 0.5065022714325156,
+      "auc_raw": 0.5065022714325156,
+      "direction": "fraud_high",
+      "mutual_info": 0.003907291886932951
+    },
+    {
+      "name": "col_gray_mean",
+      "auc": 0.5055580007724441,
+      "auc_raw": 0.49444199922755594,
+      "direction": "fraud_low",
+      "mutual_info": 0.007535312555200013
+    },
+    {
+      "name": "col_g_mean",
+      "auc": 0.505330814719479,
+      "auc_raw": 0.4946691852805209,
+      "direction": "fraud_low",
+      "mutual_info": 0.003465978676842507
+    },
+    {
+      "name": "spec_radial_4",
+      "auc": 0.5052711325181194,
+      "auc_raw": 0.4947288674818806,
+      "direction": "fraud_low",
+      "mutual_info": 0.004360781580191819
+    },
+    {
+      "name": "spec_radial_8",
+      "auc": 0.5050778737163937,
+      "auc_raw": 0.5050778737163937,
+      "direction": "fraud_high",
+      "mutual_info": 0.007878329630890857
+    },
+    {
+      "name": "spec_radial_5",
+      "auc": 0.5045486089377683,
+      "auc_raw": 0.5045486089377683,
+      "direction": "fraud_high",
+      "mutual_info": 0.0050184042260179584
+    },
+    {
+      "name": "res_tilevar_maxratio",
+      "auc": 0.5036795554745181,
+      "auc_raw": 0.4963204445254818,
+      "direction": "fraud_low",
+      "mutual_info": 0.0031137452772069807
+    },
+    {
+      "name": "spec_radial_3",
+      "auc": 0.5029927227338651,
+      "auc_raw": 0.49700727726613486,
+      "direction": "fraud_low",
+      "mutual_info": 0.0028232965895933493
+    },
+    {
+      "name": "res_std",
+      "auc": 0.5021322968424565,
+      "auc_raw": 0.5021322968424565,
+      "direction": "fraud_high",
+      "mutual_info": 0.005238255404273806
+    },
+    {
+      "name": "res_hf_energy",
+      "auc": 0.5021322968424565,
+      "auc_raw": 0.5021322968424565,
+      "direction": "fraud_high",
+      "mutual_info": 0.00523364927259129
+    },
+    {
+      "name": "res_kurt",
+      "auc": 0.5017112442503279,
+      "auc_raw": 0.5017112442503279,
+      "direction": "fraud_high",
+      "mutual_info": 0.005726626772419419
+    },
+    {
+      "name": "spec_radial_1",
+      "auc": 0.5014018722495277,
+      "auc_raw": 0.49859812775047235,
+      "direction": "fraud_low",
+      "mutual_info": 0.0015993835551797453
+    },
+    {
+      "name": "col_frac_bright",
+      "auc": 0.5012089690615095,
+      "auc_raw": 0.5012089690615095,
+      "direction": "fraud_high",
+      "mutual_info": 0.04144198568427293
+    },
+    {
+      "name": "meta_filebytes",
+      "auc": 0.5007837789997176,
+      "auc_raw": 0.4992162210002824,
+      "direction": "fraud_low",
+      "mutual_info": 0.04649183626369702
+    },
+    {
+      "name": "meta_log_filebytes",
+      "auc": 0.5007837789997176,
+      "auc_raw": 0.4992162210002824,
+      "direction": "fraud_low",
+      "mutual_info": 0.046213785616472824
+    },
+    {
+      "name": "spec_radial_0",
+      "auc": 0.5000842906699224,
+      "auc_raw": 0.5000842906699224,
+      "direction": "fraud_high",
+      "mutual_info": 0.004016894589174536
+    }
+  ],
+  "loto": {
+    "per_type": {
+      "BENIN/DL": {
+        "freuid": 0.9870962845485555,
+        "audet": 0.3837392671296118,
+        "apcer_at_1pct_bpcer": 0.9934798807749627,
+        "auc": 0.616291932398167,
+        "n_test": 13369,
+        "fraud_rate": 0.4015259181688982
+      },
+      "EGYPT/DL": {
+        "freuid": 0.7745053023278006,
+        "audet": 0.47059387314096857,
+        "apcer_at_1pct_bpcer": 0.8567433583322741,
+        "auc": 0.5294081765603152,
+        "n_test": 15867,
+        "fraud_rate": 0.49580891157748785
+      },
+      "GUINEA/DL": {
+        "freuid": 0.9940946957931938,
+        "audet": 0.48148181783513144,
+        "apcer_at_1pct_bpcer": 0.9970304380103935,
+        "auc": 0.5185186113057323,
+        "n_test": 13389,
+        "fraud_rate": 0.40241989693031593
+      },
+      "MAURITIUS/ID": {
+        "freuid": 1.0,
+        "audet": 0.8102962715477846,
+        "apcer_at_1pct_bpcer": 1.0,
+        "auc": 0.18970660786295962,
+        "n_test": 13362,
+        "fraud_rate": 0.4011375542583446
+      },
+      "MOZAMBIQUE/DL": {
+        "freuid": 0.9849956127774697,
+        "audet": 0.5943334730436847,
+        "apcer_at_1pct_bpcer": 0.9923564504101416,
+        "auc": 0.40566422019768034,
+        "n_test": 13365,
+        "fraud_rate": 0.40134680134680134
+      }
+    },
+    "mean_freuid": 0.9481383790894039,
+    "mean_auc": 0.451917909664971
+  },
+  "in_distribution_cv": {
+    "freuid": 0.025817741341602328,
+    "auc": 0.9947611244252336
+  },
+  "ood_gap_freuid": 0.9223206377478016
+}

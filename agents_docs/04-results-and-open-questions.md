@@ -98,6 +98,46 @@ Findings:
   **0.29127** (the leakage-safe b2). The aux models *might* do better on the public LB and
   the private set — untested.
 
+## Hand-crafted forensic feature bank (statistical noise analysis)
+
+Hypothesis tested: a generator-agnostic *statistical/noise* prior (ELA, noise residuals,
+DCT/Benford, radial power spectrum, blockiness, compression metadata — 66 features in
+`freuid/forensics.py`) might generalise to **unseen document types** better than backbones
+that overfit seen types. Extracted on all 69,352 images; evaluated with `scripts/15` (GBM)
+and `scripts/16` (per-feature within-type robustness).
+
+| Setting | AUC | FREUID |
+|---|---|---|
+| In-distribution 5-fold CV (HistGB on 66 features) | **0.995** | 0.026 |
+| **Leave-one-type-out** (train 4 types → predict 5th) | **0.452** | 0.948 |
+| → OOD gap | — | **+0.92** |
+
+**Verdict: the hypothesis is *not* supported.** The features carry very strong fraud signal
+*in-distribution* (AUC 0.995) but **collapse to below chance on an unseen type** (mean LOTO
+AUC 0.452; MAURITIUS/ID — the only ID among 4 DLs — inverts to 0.19). The GBM learns
+*absolute*, type-specific thresholds (each issuer/capture pipeline has its own baseline
+feature levels) that invert on a new type. This mirrors the deep models' OOD collapse and is
+*worse* OOD than EffNetV2-M cross-country — so raw forensics → GBM is **not** the shortcut to
+the unseen-type private set.
+
+What survives (per-feature within-type AUC, direction-agnostic, `scripts/16`):
+- **ELA (error-level analysis) is the standout family**: `ela_std` mean 0.74 (up to **0.995**
+  within some types), `ela_frac_high` mean 0.72, `ela_mean` 0.69. Compression/recompression
+  signatures are the strongest hand-crafted fraud cue here.
+- But **no single feature has MIN within-type AUC ≥ 0.58** — every feature is strong in *some*
+  types and near-useless in others (`ela_std` ranges 0.56→0.995 across the 5 types). The
+  signal is real but **type-entangled and uneven**, never universal.
+
+Takeaways:
+- Confirms *why* OOD is hard: fraud signatures are heavily type-specific — which is also why
+  adding *diverse external data* (IDNet) was the dominant lever, not architecture.
+- Forensics are **not** a standalone OOD classifier. The only remaining credible use is
+  **fusion**: feed ELA / noise-residual maps as extra input channels to EffNetV2 so the
+  backbone supplies the type context the raw feature lacks. Expectations tempered — ELA is
+  strong on *digital-recompression* fraud but likely weak on the captured/unseen types the
+  private set emphasises (exactly the types where ELA's within-type AUC was lowest).
+- Artifacts: `artifacts/forensic_eda.json`, `artifacts/forensic_feature_robustness.json`.
+
 ## Leave-one-type-out (LOTO)
 
 - Smoke (random scorer) wired and working: freuid_mean ≈ 0.98 (chance), per-type + summary.
