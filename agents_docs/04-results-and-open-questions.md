@@ -21,7 +21,17 @@
 | Submission | Model | publicScore (lower=better) |
 |---|---|---|
 | 53623661 | earlier type-holdout b2 (epoch2) | 0.333 |
-| 53627140 | leakage-safe b2 (3 epoch) | **0.291** |
+| 53627140 | leakage-safe b2 (3 epoch) | 0.291 |
+| 53954498 | EffNetV2-M **3-country** + domain aug + focal + IDNet aux | 0.30353 |
+| 53954497 | EffNetV2-M **all-5** + domain aug + focal + IDNet aux | **0.20744** |
+
+**Standing (public LB, 109 teams):** best = **0.20744 → rank 59/109**, up from ~86 with the
+0.291 baseline. The 30k-IDNet-aux EffNetV2-M moved us **+27 places**. Note the all-5 model
+(0.207) beats the 3-country one (0.304) on public *because public_test is all seen
+types/countries* — that edge will not fully transfer to the private set's 2 unseen types, so
+the cross-country-robust model remains the more honest generalizer. Top of LB is still
+~0.0006 (rank 1); the lever for closing it = more external fraud data + heavier capture aug +
+ensembling (we got +27 from one backbone, 30k aux, 3 epochs, no ensemble).
 
 - **The headline calibration:** our leakage-safe b2 scores **local in-distribution FREUID
   ≈ 0.0001** but **public LB 0.291**. The public test is the *same 5 types*, held-out images —
