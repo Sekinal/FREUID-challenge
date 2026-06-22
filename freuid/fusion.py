@@ -179,6 +179,7 @@ class FusionConfig:
     focal_gamma: float = 2.0
     amp: bool = True
     capture_aug: bool = True
+    aug_strength: str = "default"      # "default" | "heavy"
     max_train: int = 0                 # 0 = all
 
 
@@ -233,7 +234,8 @@ def train_fusion(train_df, train_feats, eval_sets, cfg: FusionConfig, save_name=
         train_df = train_df.iloc[idx].reset_index(drop=True); train_feats = train_feats[idx]
 
     tf_train = data.build_transforms(data.DataConfig(img_size=cfg.img_size, train=True,
-                                                     capture_aug=cfg.capture_aug))
+                                                     capture_aug=cfg.capture_aug,
+                                                     aug_strength=cfg.aug_strength))
     tf_eval = data.build_transforms(data.DataConfig(img_size=cfg.img_size, train=False))
     tr_loader = DataLoader(FusionDataset(train_df, train_feats, tf_train),
                            batch_size=cfg.batch_size, shuffle=True, drop_last=True,

@@ -33,6 +33,7 @@ def parse_args():
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--workers", type=int, default=12)
     p.add_argument("--submit", action="store_true")
+    p.add_argument("--tta", action="store_true", help="average original + horizontal-flip predictions")
     p.add_argument("--message", default="")
     return p.parse_args()
 
@@ -63,10 +64,18 @@ def main():
     feats, keep = fusion.extract_fusion_features(frame["abs_path"].astype(str).tolist(),
                                                  batch_size=args.batch_size, workers=args.workers)
 
+    import torchvision.transforms as T
     tf_eval = data.build_transforms(data.DataConfig(img_size=img_size, train=False))
     loader = DataLoader(fusion.FusionDataset(frame, feats, tf_eval),
                         batch_size=args.batch_size, num_workers=args.workers, pin_memory=True)
     scores = fusion._predict(model, loader, dev)
+    if args.tta:
+        tf_flip = T.Compose([T.Resize((img_size, img_size)), T.RandomHorizontalFlip(p=1.0),
+                             T.ToTensor(), T.Normalize(data.IMAGENET_MEAN, data.IMAGENET_STD)])
+        loader2 = DataLoader(fusion.FusionDataset(frame, feats, tf_flip),
+                             batch_size=args.batch_size, num_workers=args.workers, pin_memory=True)
+        scores = (scores + fusion._predict(model, loader2, dev)) / 2.0
+        print("[predict] TTA: averaged original + hflip")
     print(f"[predict] scores: mean={scores.mean():.3f} min={scores.min():.3f} max={scores.max():.3f}")
 
     sub = io.load_sample_submission()

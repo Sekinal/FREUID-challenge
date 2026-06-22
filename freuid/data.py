@@ -30,6 +30,7 @@ class DataConfig:
     img_size: int = 384
     train: bool = True
     capture_aug: bool = True
+    aug_strength: str = "default"     # "default" | "heavy" (heavier capture sim + moiré)
 
 
 # --------------------------------------------------------------------------
@@ -67,6 +68,26 @@ class RandomDownscale:
         return img
 
 
+class RandomMoire:
+    """Overlay a faint sinusoidal interference pattern -> simulates screen/print moiré."""
+
+    def __init__(self, p: float = 0.3, amp: float = 0.15) -> None:
+        self.p, self.amp = p, amp
+
+    def __call__(self, img: Image.Image) -> Image.Image:
+        if random.random() >= self.p:
+            return img
+        import numpy as np
+        a = np.asarray(img, dtype=np.float32)
+        h, w = a.shape[:2]
+        freq = random.uniform(0.15, 0.6)            # cycles per pixel-ish
+        ang = random.uniform(0, 3.14159)
+        yy, xx = np.mgrid[0:h, 0:w]
+        wave = np.sin(2 * 3.14159 * freq * (xx * np.cos(ang) + yy * np.sin(ang)))
+        a = a * (1.0 + self.amp * wave[..., None])
+        return Image.fromarray(np.clip(a, 0, 255).astype("uint8"))
+
+
 def build_transforms(cfg: DataConfig) -> T.Compose:
     resize = T.Resize((cfg.img_size, cfg.img_size))
     normalize = T.Normalize(IMAGENET_MEAN, IMAGENET_STD)
@@ -75,6 +96,22 @@ def build_transforms(cfg: DataConfig) -> T.Compose:
 
     if not cfg.capture_aug:
         return T.Compose([resize, T.RandomHorizontalFlip(0.5), T.ToTensor(), normalize])
+
+    if cfg.aug_strength == "heavy":
+        # aggressively simulate print-and-capture: lower JPEG, harder downscale, moiré,
+        # stronger perspective/lighting/blur.
+        return T.Compose([
+            resize,
+            T.RandomHorizontalFlip(0.5),
+            T.RandomPerspective(distortion_scale=0.3, p=0.4),
+            T.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.03),
+            RandomMoire(p=0.3, amp=0.15),
+            T.RandomApply([T.GaussianBlur(3, sigma=(0.3, 2.5))], p=0.4),
+            RandomDownscale(scale_range=(0.3, 1.0), p=0.6),
+            RandomJPEG(quality_range=(22, 90), p=0.7),
+            T.ToTensor(),
+            normalize,
+        ])
 
     return T.Compose([
         resize,

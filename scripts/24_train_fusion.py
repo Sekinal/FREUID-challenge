@@ -42,6 +42,7 @@ def parse_args():
     p.add_argument("--train-all", action="store_true", help="train on all 5 types (submission model)")
     p.add_argument("--no-fusion", action="store_true", help="ablation: backbone only")
     p.add_argument("--loss", default="focal", choices=["focal", "bce"])
+    p.add_argument("--aug-strength", default="default", choices=["default", "heavy"])
     p.add_argument("--workers", type=int, default=12)
     p.add_argument("--feat-batch", type=int, default=128)
     p.add_argument("--smoke", action="store_true")
@@ -153,10 +154,11 @@ def main():
     cfg = fusion.FusionConfig(backbone=args.backbone, img_size=args.img_size,
                               epochs=args.epochs, batch_size=args.batch_size,
                               use_fusion=not args.no_fusion, loss_type=args.loss,
-                              num_workers=args.workers)
+                              aug_strength=args.aug_strength, num_workers=args.workers)
     tag = ("nofusion" if args.no_fusion else "fusion") + (
         f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type
-        else ("_all" if args.train_all else "")) + ("_scanned" if args.scanned_aux else "")
+        else ("_all" if args.train_all else "")) + ("_scanned" if args.scanned_aux else "") + (
+        "_heavy" if args.aug_strength == "heavy" else "")
     # val first -> checkpoint selection uses val AuDET (never peeks at any held-out test)
     eval_sets = {"val": (val, val_feats)}
     if test is not None:
