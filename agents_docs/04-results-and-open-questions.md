@@ -30,8 +30,10 @@
 (0.207) beats the 3-country one (0.304) on public *because public_test is all seen
 types/countries* — that edge will not fully transfer to the private set's 2 unseen types, so
 the cross-country-robust model remains the more honest generalizer. Top of LB is still
-~0.0006 (rank 1); the lever for closing it = more external fraud data + heavier capture aug +
-ensembling (we got +27 from one backbone, 30k aux, 3 epochs, no ensemble).
+~0.0006 (rank 1); the lever for closing it = more external fraud data + heavier capture aug
+on a single strong model. **Directive: NO ensembling until we have a genuinely strong single
+model** — ensembling weak bases only hides the real problem. (We got +27 from one backbone,
+30k aux, 3 epochs.)
 
 - **The headline calibration:** our leakage-safe b2 scores **local in-distribution FREUID
   ≈ 0.0001** but **public LB 0.291**. The public test is the *same 5 types*, held-out images —
@@ -116,8 +118,10 @@ Findings:
 2. **IDNet aux is confirmed the dominant lever** (e0 0.98 → e5 0.36). Get more/better external
    fraud data; investigate why the *scanned* IDNet split hurt (e3).
 3. **Real LOTO numbers** with the aux-augmented model — the OOD headline metric.
-4. Scale on the A100 (EffNetV2-M is the current best backbone; try b4 / higher res / TTA /
-   ensemble) once leakage-safe LOTO is the yardstick.
+4. Scale a **single** model on the A100 (EffNetV2-M is the current best backbone; try
+   higher res / longer training / TTA / better aug) once leakage-safe LOTO is the yardstick.
+   **No ensembling until one model is genuinely strong** (user directive) — ensembling weak
+   bases masks the real generalization gap rather than closing it.
 5. **Submit the aux models** — the cross-country models (`submissions/sub_e5_*`, `sub_f3_*`)
    were never uploaded; calibrate them against the public LB.
 6. When private images drop: re-predict and resubmit the full 142,818.
