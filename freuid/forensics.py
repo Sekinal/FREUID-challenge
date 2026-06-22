@@ -239,13 +239,15 @@ def _f_spectral(d: dict, gray: np.ndarray) -> None:
           [slope, hf_lf, peak_count, peak_max])
 
 
-def _f_ela(d: dict, img: Image.Image, side: int) -> None:
+def _f_ela(d: dict, crop_img: Image.Image) -> None:
+    # ELA on the analysis crop only (not the full-res image) -> much cheaper and
+    # keeps the error map aligned with the same region the other features use.
     buf = _io.BytesIO()
-    img.save(buf, "JPEG", quality=90)
+    crop_img.save(buf, "JPEG", quality=90)
     buf.seek(0)
     re = Image.open(buf).convert("RGB")
-    a = _center_square(np.asarray(img.convert("RGB"), dtype=np.float64), side)
-    b = _center_square(np.asarray(re, dtype=np.float64), side)
+    a = np.asarray(crop_img, dtype=np.float64)
+    b = np.asarray(re, dtype=np.float64)
     ela = np.abs(a - b)
     _safe(d, ["ela_mean", "ela_std", "ela_max", "ela_p99", "ela_frac_high"],
           [ela.mean(), ela.std(), ela.max(),
@@ -270,8 +272,13 @@ def extract_features(path: str | Path, crop: int = CROP) -> dict[str, float]:
     except Exception:
         pass
     try:
-        rgb_full = np.asarray(img, dtype=np.float64)
-        rgb = _center_square(rgb_full, crop)
+        # Crop in PIL space *before* converting to float64 so we never materialise
+        # a full-resolution float array (a 4000x3000 image would be ~288 MB).
+        w, h = img.size
+        s = min(crop, w, h)
+        left, top = (w - s) // 2, (h - s) // 2
+        crop_img = img.crop((left, top, left + s, top + s))
+        rgb = np.asarray(crop_img, dtype=np.float64)
         gray = rgb @ np.array([0.299, 0.587, 0.114])
     except Exception:
         return d
@@ -280,7 +287,7 @@ def extract_features(path: str | Path, crop: int = CROP) -> dict[str, float]:
         lambda: _f_residual(d, gray),
         lambda: _f_dct(d, gray),
         lambda: _f_spectral(d, gray),
-        lambda: _f_ela(d, img, crop),
+        lambda: _f_ela(d, crop_img),
     ):
         try:
             fn()
