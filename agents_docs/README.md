@@ -46,6 +46,8 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 | No-aux cross-country FREUID (ablation) | 0.9809 → **IDNet aux is the dominant lever** |
 | **Best public LB** (EffNetV2-M all-5 + aug + focal + IDNet aux) | **0.20744 → rank 59/109** (was ~86 at 0.291) |
 | Forensic features (66) in-dist vs LOTO AUC | 0.995 vs **0.452** → not OOD-robust standalone (ELA strongest) |
+| Spectral (FFT) fingerprint cross-type corr | **+0.06** → no universal generation fingerprint |
+| Normalised spectral shape LOTO AUC | **0.63–0.65** (vs 0.452 scalar) → transfers better; fusion candidate |
 
 ## Documents
 

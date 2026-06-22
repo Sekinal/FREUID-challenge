@@ -138,6 +138,39 @@ Takeaways:
   private set emphasises (exactly the types where ELA's within-type AUC was lowest).
 - Artifacts: `artifacts/forensic_eda.json`, `artifacts/forensic_feature_robustness.json`.
 
+## Fourier / spectral fingerprint analysis (GPU)
+
+Follow-up to the forensic-feature collapse: do *frequency-domain* patterns carry a
+**type-agnostic** fraud signature? `scripts/17_spectral_fingerprint.py` (PyTorch, A100;
+all 69,352 spectra in 63 s) computes the noise-residual 2-D FFT log-power per image,
+**per-image normalised** (so it captures spectral *shape*, not type-specific energy level),
+then aggregates mean fraud/genuine spectra per type.
+
+**Decisive test — is the (fraud − genuine) spectral difference consistent across types?**
+Cross-type correlation of the per-type difference maps = **+0.062** (≈ 0). → **No universal
+generation fingerprint.** If GenAI/recompression left a consistent periodic signature the
+per-type differences would align; they don't. Fraud is type-specific even in frequency space.
+
+**But normalised spectral *shape* generalises to unseen types better than scalar forensics:**
+
+| Representation (leave-one-type-out) | OOD AUC | FREUID |
+|---|---|---|
+| 66 scalar forensic features (`scripts/15`) | 0.452 (below chance) | 0.948 |
+| Spectral radial profile, 64-bin (normalised) | **0.630** | 0.893 |
+| Downsampled 2-D spectrum, 32×32 (normalised) | **0.646** | 0.843 |
+
+Takeaways:
+- Per-image normalisation is the trick: removing the type-specific energy *level* lifts
+  unseen-type AUC from 0.45 → 0.63-0.65. Still weak in absolute terms (not a standalone lever),
+  but it's the **first representation meaningfully above chance on unseen types**.
+- It's **orthogonal** to the CNN's RGB view → a credible **fusion stream** (normalised
+  residual-spectrum / radial profile as an extra input to EffNetV2). More promising than raw
+  ELA because it actually transfers across types.
+- Consolidates the meta-finding: **no single-image statistic is a silver bullet — fraud is
+  type-entangled.** Dominant lever stays diverse data (IDNet); normalised-spectral fusion is a
+  secondary, genuinely-transferable signal to stack on the CNN.
+- Artifacts: `artifacts/spectral_fingerprint.json` (+ `spectral_means.npz`, git-ignored).
+
 ## Leave-one-type-out (LOTO)
 
 - Smoke (random scorer) wired and working: freuid_mean ≈ 0.98 (chance), per-type + summary.
