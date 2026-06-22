@@ -220,9 +220,25 @@ Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapes
   challenge. Still not "strong" absolutely (FREUID 0.82), but the best, and **orthogonal to the
   CNN/low-level features → the top fusion candidate.** Follow-up: ViT-L/14 (UnivFD's backbone,
   usually stronger; the 1.7 GB download died on this box's flaky link) may push it higher.
+- **Local / region self-referential probe — "NPR on CLIP patch tokens"** (`scripts/20`, n=24k).
+  Idea (sound!): FREUID fraud is *localized*, so compare regions *within* each image — a
+  self-referential signal whose type-specific baseline cancels (type-agnostic by construction).
+  Implemented as intra-image patch-to-mean anomaly + patch-to-neighbour distance on CLIP's
+  14×14 patch tokens. **Result: clean negative.** anomaly 0.437, CLIP-NPR 0.496, combined 0.461
+  (all ≈/below chance); global+local 0.680 = no gain over global CLIP 0.686.
+  **Why CLIP is the wrong substrate for the right idea:** (1) CLIP patches are *semantic* — a
+  document is naturally heterogeneous (photo / text / hologram / background), so intra-image
+  "anomaly" is dominated by *normal layout*, not tampering; (2) 224px is too coarse — a swapped
+  digit/date is far below patch resolution; (3) good forgeries are *semantically consistent* (a
+  swapped face still reads "face"), so a semantic encoder sees nothing. **The self-referential
+  framing is the keeper; it needs a low-level high-res substrate.**
+- **Most promising untested idea: high-res intra-image *noise/forensic* inconsistency.** Apply
+  the self-referential region comparison to **noise residuals at native resolution** (where a
+  tamper leaves a statistical trace and is actually visible), not coarse semantic patches —
+  i.e. weakly-supervised forgery localization via noiseprint inconsistency. Type-agnostic by
+  construction; the right realization of the local-region idea.
 - **Still on the list:** forgery *localization* (SAFIRE / SAM, 2025; DocForge-Bench, 2026) —
-  predict the tampered *region*; apt since manipulations are local, but needs region labels we
-  mostly lack (IDNet may provide some).
+  supervised tampered-region prediction; needs region labels we mostly lack (IDNet may provide).
 - Sources: NPR arXiv:2312.10461 · UnivFD arXiv:2508.01603 · C2P-CLIP arXiv:2408.09647 ·
   DocForge-Bench arXiv:2603.01433 · ID-card PAD review arXiv:2511.06056.
 
