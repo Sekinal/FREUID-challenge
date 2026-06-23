@@ -44,8 +44,8 @@ full-dataset work on the GPU box (`/root/freuid`, A100-80GB).
 | → in-dist vs public gap | ~0.29 (the digital→captured shift, made real) |
 | Best **cross-country OOD** FREUID (`aux-modeling`) | **0.3556** (EffNetV2-M + domain aug + focal + 30k IDNet aux) |
 | No-aux cross-country FREUID (ablation) | 0.9809 → **IDNet aux is the dominant lever** |
-| **Best public LB** (EffNetV2-M all-5 no-fusion, scripts/24 capture-aug + focal + IDNet) | **0.18695 → rank 53/109** |
-| Fusion model (+ CLIP + region-noise streams) public LB | 0.22477 → **fusion HURTS** (clean feats mislead under capture shift) |
+| **Best public LB** (EffNetV2-M + 30k digital IDNet + default capture-aug + focal + **TTA**) | **0.17795 → rank 51/109** |
+| What helped vs the 0.187 baseline | **only TTA** (+0.009); heavy-aug / 60k-data / captured-IDNet / fusion all HURT |
 | Forensic features (66) in-dist vs LOTO AUC | 0.995 vs **0.452** → not OOD-robust standalone (ELA strongest) |
 | Spectral (FFT) fingerprint cross-type corr | **+0.06** → no universal generation fingerprint |
 | Normalised spectral shape LOTO AUC | **0.63–0.65** (vs 0.452 scalar) → transfers better; fusion candidate |

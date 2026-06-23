@@ -71,6 +71,21 @@ So, in priority order, the levers that actually move the OOD number:
 | 53958821 | **Fusion** EffNetV2 + CLIP + region-noise (all-5 + IDNet) | 0.22477 (fusion hurts) |
 | 53959179 | **No-fusion** EffNetV2 all-5 (scripts/24 capture-aug + focal + IDNet) | **0.18695 → rank 53/109 (best)** |
 | 53960157 | No-fusion + **50k real captured (scanned) IDNet** | 0.22069 (captured IDNet HURTS FREUID) |
+| 53961558 | No-fusion + **heavy capture aug + moiré** (isolated) | 0.22002 (heavy aug HURTS) |
+| 53961606 | No-fusion 30k + **TTA (hflip avg)** (isolated) | **0.17795 → rank 51/109 (BEST)** |
+| 53962432 | No-fusion + **60k digital IDNet** (2x) + TTA | 0.21962 (more data HURTS past 30k) |
+
+### Disciplined one-variable-at-a-time sweep (vs the 0.187 baseline)
+- **TTA (hflip averaging): the ONLY lever that helped** — 0.18695 → **0.17795** (rank 53→51). Free,
+  inference-only. Keep it.
+- **Heavy capture aug: hurts** (0.220) — over-degrades training images away from the test dist.
+- **More IDNet data: non-monotonic** — 0 = useless (0.98), 30k = sweet spot, 60k = HURTS (0.220).
+  IDNet adds diversity up to a point, then swamps the FREUID signal.
+- **Captured IDNet / feature fusion: hurt** (0.221 / 0.225), per above.
+- **Best model = EffNetV2-M + 30k digital IDNet + default capture-aug + focal + TTA = 0.17795,
+  rank 51/109.** A robust local optimum; nothing we isolated beats it except TTA. Session arc:
+  0.291 → 0.207 → 0.187 → **0.178**. Further gains likely need real captured *FREUID* data (which
+  we don't have) — the digital-only ceiling appears firm around here.
 
 ### Validation is the hard part: no local proxy predicts the FREUID capture shift
 - **Digital / held-out-type val saturates** (~0) — a trained CNN keys on the type-invariant
