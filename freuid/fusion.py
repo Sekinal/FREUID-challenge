@@ -195,7 +195,7 @@ class FusionDataset(Dataset):
 
     def __getitem__(self, i):
         try:
-            img = Image.open(self.paths[i]); img.load(); img = img.convert("RGB")
+            img = Image.open(data.cached_path(self.paths[i])); img.load(); img = img.convert("RGB")
             x = self.transform(img)
         except Exception:
             x = torch.zeros(3, 384, 384)
@@ -218,7 +218,7 @@ def _predict(model, loader, dev):
     model.eval(); out = []
     for x, ff, _ in loader:
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=(dev == "cuda")):
-            logit = model(x.to(dev, non_blocking=True), ff.to(dev, non_blocking=True))
+            logit = model(x.to(dev, non_blocking=True).to(memory_format=torch.channels_last), ff.to(dev, non_blocking=True))
         out.append(torch.sigmoid(logit.float()).cpu().numpy())
     return np.concatenate(out)
 
@@ -245,6 +245,7 @@ def train_fusion(train_df, train_feats, eval_sets, cfg: FusionConfig, save_name=
                     for k, (fr, fe) in eval_sets.items()}
 
     model = FusionModel(cfg.backbone, use_fusion=cfg.use_fusion).to(dev)
+    model = model.to(memory_format=torch.channels_last)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg.epochs * len(tr_loader))
     loss_fn = _loss_fn(cfg)
@@ -253,7 +254,8 @@ def train_fusion(train_df, train_feats, eval_sets, cfg: FusionConfig, save_name=
     for ep in range(cfg.epochs):
         model.train(); t0 = time.time(); run = 0.0
         for bi, (x, ff, y) in enumerate(tr_loader):
-            x = x.to(dev, non_blocking=True); ff = ff.to(dev, non_blocking=True)
+            x = x.to(dev, non_blocking=True).to(memory_format=torch.channels_last)
+            ff = ff.to(dev, non_blocking=True)
             y = y.to(dev, non_blocking=True)
             with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=(dev == "cuda")):
                 logit = model(x, ff); loss = loss_fn(logit, y)
