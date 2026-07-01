@@ -440,3 +440,44 @@ Config: all-5 types, **no capture-aug**, no aux, plain BCE, res-768, EffNetV2-M,
 on holdout models — a --train-all model memorises them), `artifacts/extra_diverse.csv`,
 `/root/ocr-venv` (PaddleOCR 3.7 + PP-OCRv6 + HPI, unused after OCR-consistency was
 rejected).
+
+---
+
+## Slot-2 robustness investigation — the captured axis is a data wall (2026-07-01)
+
+Built the 20-captured-image **canary** (`scripts/eval_canary.py`) — the only
+in-domain captured FREUID images (18/20 Mauritius). Ran two Mauritius-LOTO
+robust models (diverse external data, heavy aug, EffNetV2-M@384):
+
+| Run | Data added | Digital LOTO-test FREUID | **Captured canary separation** | Tripwire |
+|---|---|---|---|---|
+| v1 | 60k IDNet (5 countries) + 14.8k synth/FantasyID | 0.0002 | **+0.191** | PASS |
+| v2 | v1 + 100k incl. **scanned/captured IDNet** | 0.0000 | **+0.088** | **FAIL** |
+
+**Findings:**
+- **Unseen document TYPE is solved, and it's not the real problem.** The
+  manipulation artifact is generator-specific, not type-specific — a model
+  trained on 4 types nails the held-out 5th (digital LOTO ≈ 0.0002). Diverse
+  digital data makes this trivial. The digital LOTO number is a mirage w.r.t.
+  the private set.
+- **The CAPTURED axis is the actual blocker.** Both models false-positive
+  captured *genuine* documents (score them as fraud), even ones in the training
+  set — 4-6 captured-genuine examples in 125k are completely drowned. FREUID's
+  APCER@1%BPCER is dominated by this FP side, so it's fatal.
+- **Scanned/captured IDNet makes it WORSE** (v2 +0.088 < v1 +0.191). Scanned
+  IDNet is 67% fraud-labeled (59k fraud / 28k genuine), so "captured appearance"
+  correlates with the fraud label there — it teaches "captured = fraud" and
+  reinforces the FP bias. Confirms the earlier note that captured IDNet hurts.
+- **Root cause: ~6 captured-genuine FREUID images exist.** No source of
+  captured-genuine signal that isn't outnumbered by captured-fraud. Heavy aug
+  (simulated capture) does not substitute for the real print-and-capture
+  distribution. **The captured axis is unsolvable with available data.**
+
+**Decision:** Slot 2 = **v1 recipe** (diverse *digital* IDNet + synth, heavy aug,
+NO scanned), scaled to train-all @768 (`scripts/run_slot2.sh` ->
+`runs/slot2_robust_all768.pt`). Wins the unseen-type axis, least-bad on captured.
+Do NOT submit it to the public LB now (heavy-aug -> poor public score,
+uninformative; it's a private-set hedge to select when private images release).
+
+**Portfolio:** slot 1 = benchmax (public 0.12267), slot 2 = robust train-all@768.
+Canary is the tripwire before spending either final-submission slot.
