@@ -332,3 +332,64 @@ Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapes
 .venv/bin/python scripts/13_leave_one_type_out.py      # OOD: 5 retrains
 .venv/bin/python tests/test_metrics.py && .venv/bin/python tests/test_dedup.py && .venv/bin/python tests/test_splits.py
 ```
+
+---
+
+## Forgery-method teardown (visual, 2026-07-01)
+
+Pulled genuine/fraud twin pairs (same template, opposite label) across all 5
+types and inspected + ran ELA/noise crops. Findings:
+
+- The data are **fully-synthetic template documents** (SIDTD / FantasyID family).
+  Genuine = clean render; fraud = **localized field replacement** (inpaint /
+  crop-replace) of one or more personal-data fields.
+- Visible-by-eye candidate tells: Mozambique fraud DOB in a different font than
+  the template; Egypt fraud Latin date vs Arabic-Indic counterpart disagreeing;
+  Mauritius fraud garbled name diacritics ("Röberts Grïffïths Smîth").
+- **These turned out to be anecdotes** — see the OCR experiment below, which
+  refutes all three at scale.
+
+## OCR semantic-consistency stream — BUILT, TESTED, REJECTED (2026-07-01)
+
+**Hypothesis:** if the forgery leaves *semantic* inconsistencies (cross-script
+date disagreement, chronology violations, anomalous name rendering), an OCR pass
+could catch them and — being semantic, not pixel — **generalize to unseen types**
+(the private-set bet), unlike fragile digital artifacts.
+
+**Build:** PaddleOCR 3.7.0 (PP-OCRv6 latin + `arabic_PP-OCRv5` recognition, HPI /
+Paddle-Inference GPU) in an isolated `/root/ocr-venv`. OCR (Latin + Arabic pass,
+Arabic-script-filtered) → 24 features in `freuid/consistency.py` (cross-script
+year mismatch, chronology/age logic, name-diacritic anomalies, OCR-confidence
+stats, text-box geometry). 2,500 imgs (250/type/label). Model: HistGBM.
+Eval `scripts/consistency_eval.py` (uses `freuid.metrics.freuid_score`):
+
+| Eval | AUC | FREUID |
+|---|---|---|
+| in-distribution 5-fold | 0.72 | 0.77 |
+| **leave-one-type-out (OOD)** | 0.46–0.60 | **0.978** |
+
+→ **No generalization** (LOTO ≈ ConvNeXt-no-aux 0.98). The *semantic* features
+carried ≈ zero weight; only `min_conf` / box-geometry gave the weak in-dist AUC.
+
+**Diagnostic (mean feature by type,label) — the hypothesis is FALSE:**
+- cross-script mismatch: Egypt genuine **0.924** vs fraud **0.904** (≈ equal;
+  genuine mismatches *slightly more*).
+- name weird-accents: Mauritius genuine **4.62** vs fraud **4.52** (≈ equal → a
+  template-generator quirk present in genuine docs too, not a forgery tell).
+- chronology / implausible-age (from *reliable* Latin dates): Δ ≈ 0, sign
+  inconsistent across countries.
+
+**Conclusion:** the forger produces **semantically valid** documents — plausible
+dates, consistent cross-fields, same diacritic quirks as genuine. There is no
+cheap semantic contradiction; the visual "tells" were confirmation bias on 3
+cherry-picked twins. The real fraud signal is a **pixel-level localized artifact**
+(inpainting / font-edge residue) that a CNN separates in-distribution but that is
+template-specific and does not transfer. **Do NOT revisit OCR-semantic detection.**
+
+Artifacts/code: `artifacts/consistency/{features.csv,ocr_raw.jsonl}`,
+`freuid/consistency.py`, `scripts/ocr_build.py`, `scripts/consistency_eval.py`.
+Tooling: `/root/ocr-venv` (PaddleOCR 3.7.0 + paddlepaddle-gpu 3.1.0 + HPI).
+
+**Add to the "where the lever is" synthesis table:**
+
+| OCR semantic-consistency (cross-script / chrono / diacritics) | in-dist AUC 0.72 | LOTO FREUID **0.978** (chance) | forger keeps docs semantically valid — no OCR shortcut |
