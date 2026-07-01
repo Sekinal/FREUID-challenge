@@ -393,3 +393,50 @@ Tooling: `/root/ocr-venv` (PaddleOCR 3.7.0 + paddlepaddle-gpu 3.1.0 + HPI).
 **Add to the "where the lever is" synthesis table:**
 
 | OCR semantic-consistency (cross-script / chrono / diacritics) | in-dist AUC 0.72 | LOTO FREUID **0.978** (chance) | forger keeps docs semantically valid — no OCR shortcut |
+
+---
+
+## Benchmax result + two-slot portfolio pivot (2026-07-01)
+
+**Public-LB result (validated by submission):**
+
+| Submission | Public FREUID |
+|---|---|
+| **benchmax single-seed s1** | **0.12267** ← new best |
+| benchmax 3-seed ensemble | 0.12399 |
+| prior 768 (with capture-aug) | 0.15542 |
+| prior overall best | 0.18695 |
+
+Config: all-5 types, **no capture-aug**, no aux, plain BCE, res-768, EffNetV2-M,
+896px decode cache, channels_last, flip-TTA. Code: `scripts/run_benchmax.sh`,
+`scripts/24_train_fusion.py --no-capture-aug --seed`.
+
+**Findings:**
+- **Capture-aug was sabotaging the public LB.** Removing it (keeping the fragile
+  digital inpainting artifact) is the whole win: 0.187 → 0.123 (~34%). Confirms
+  the ablation ladder — the public/in-distribution artifact is high-frequency and
+  aug destroys it.
+- **Ensemble-of-clones does NOT help** (0.124 vs 0.123). All seeds overfit to
+  near-perfect in-dist (val FREUID ~1e-7) → near-identical, low-diversity models;
+  averaging regresses the APCER@1%BPCER operating point. Use the best single seed.
+- **No non-invasive training speedup exists for EffNetV2** (measured): torch.compile
+  a wash (71 vs 70 img/s), fp8/int4 target compute-bound GEMMs but MBConv/depthwise
+  convs are *bandwidth-bound* (~3% MFU at 99% util). Unsloth is LLM/VLM-only. The
+  real speedups (896px cache to fix decode-bound loading, channels_last) are already in.
+
+**Strategy pivot — two final slots (confirmed available):**
+- **Slot 1 = benchmax (DONE, 0.12267).** Public-LB is only ~5% of test and is
+  discarded for final ranking; do not over-invest. Twin-override is the only cheap
+  remaining public lever (~20 min, mechanical) and is optional.
+- **Slot 2 = robustness-maxxed (IN PROGRESS).** Private set = 2 unseen doc types +
+  captured emphasis, i.e. built to kill the benchmax model. Only lever that ever
+  moved OOD is **external-data diversity** (30k IDNet gave 3×: 0.98 → 0.356 LOTO).
+  Robust-val run: Mauritius-LOTO (doubles as the captured proxy — 18/20 captured
+  images are Mauritius) with **60k IDNet (5 countries) + 14.8k synth/FantasyID**,
+  heavy aug, EffNetV2-M@384. `scripts/run_robustval.sh`.
+
+**New assets on the box:** `scripts/build_cache.py` (896px cache builder, ~12 GB at
+`data/cache896`), `scripts/eval_canary.py` (20 captured-image tripwire; valid only
+on holdout models — a --train-all model memorises them), `artifacts/extra_diverse.csv`,
+`/root/ocr-venv` (PaddleOCR 3.7 + PP-OCRv6 + HPI, unused after OCR-consistency was
+rejected).
