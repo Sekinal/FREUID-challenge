@@ -1,75 +1,97 @@
-# FREUID Challenge 2026 — Starter / EDA
+# The FREUID Challenge 2026 — Solution (Team EliasTSJ + Sekinal)
 
-Exploratory data analysis scaffold for the
-[FREUID Challenge 2026 (IJCAI-ECAI)](https://www.kaggle.com/competitions/the-freuid-challenge-2026-ijcai-ecai) —
-**next-generation identity-document fraud detection** across physical manipulations,
-GenAI-driven multimodal edits, and print-and-capture forgeries.
+Fraud detection on identity documents for [The FREUID Challenge 2026 (IJCAI-ECAI)](https://www.kaggle.com/competitions/the-freuid-challenge-2026-ijcai-ecai).
 
-This repo currently covers **data analysis & exploration only** (no modelling yet).
-It is built to run on a GPU box and to **scale automatically** from the tiny public
-sample to the full release.
+## Results
 
-## The task (from the public sample)
+| Model | Public LB | Cross-country (LOCO) | Capture canary (AUC) |
+|---|---|---|---|
+| **Public specialist** (`bm1024`) | **0.02514** | 0.033 Moz / 0.010 Benin / 0.007 Maur | 0.726 |
+| **Robust / private** (`slot2v3` 3-seed ensemble) | 0.11925 | **0.025** (Mozambique, epoch 0) | **0.917** |
 
-- **Goal:** predict `P(fraud)` per image `id`. `sample_submission.csv` is `id,label`
-  with `label` a probability in `[0, 1]` → a ranking/AUC-style metric.
-- **Labels** (`train_sample_labels.csv`): `id, image_path, label (0=genuine/1=fraud),
-  is_digital (bool), type ("<COUNTRY>/<DOC_TYPE>")`, e.g. `MAURITIUS/ID`, `GUINEA/DL`.
-- The public release ships only a **13-image `train_sample/`**; the test set is hidden.
+Both final submissions share the same backbone (EffNetV2-M) and training data
+(official FREUID train set only — no external data). They differ in exactly two
+training flags, which specialize them for the two announced test regimes:
 
-## Key EDA findings (public sample)
+| | Public specialist | Robust model |
+|---|---|---|
+| Resolution | 1024 | 1024 |
+| Capture-simulating augmentation | **off** (preserve fragile digital artifacts) | **heavy** (JPEG recompress, blur, moiré, perspective) |
+| Epochs | 3 | **1** (early stopping — more epochs memorize fragile artifacts) |
+| Seeds | 1 | 3, probability-averaged |
 
-| Finding | Detail |
-|---|---|
-| Class balance | 3 fraud / 10 genuine (23% fraud) |
-| Strata | 5 countries (BENIN, EGYPT, GUINEA, MAURITIUS, MOZAMBIQUE); doc types DL (10) / ID (3); `is_digital` 7 / 6 |
-| Integrity | 13/13 JPEG, RGB, 0 corrupt; ~840–1585 px wide, aspect ≈ 1.58 |
-| **Near-duplicates** | **5 near-dup pairs (pHash ≤ 8), 3 with conflicting labels** → matched genuine↔tampered pairs / shared templates. **Group them into the same CV fold or folds leak.** |
-| Embedding structure | CLIP ViT-B/32 features separate by `doc_type`/`country` but **not** by `label` (LOO-kNN ≈ 0.77, label silhouette ≈ 0) → fraud cues are subtle, likely need forensic/high-res features |
+### Key findings (see the technical report for details)
 
-Full write-up with figures: **[`report/report.pdf`](report/report.pdf)**.
+1. **Resolution is the universal lever.** Fraud edits leave pixel-scale traces
+   (resampling seams, JPEG-grid mismatches). Downscaling to 384–768 destroys
+   them; at 1024 (near-native) both in-distribution AND cross-country scores
+   improve by an order of magnitude (public 0.123→0.025; unseen-country
+   0.40→0.01–0.03). The traces generalize across countries — templates do not.
+2. **Early stopping controls the robustness trade-off.** With capture-aug,
+   epoch 0 generalizes best (0.025 vs 0.097 at epoch 2 on a held-out country).
+3. **External data poisoned everything it touched** (measured, then removed):
+   IDNet-scanned killed real-capture detection (canary AUC 0.50); GenAI
+   synthetic fraud made from FREUID genuines taught "unknown country = fraud"
+   (LOCO 1.0); pseudo-labels dragged the student toward a weaker teacher.
+4. **Leave-One-Country-Out (LOCO) validation** — not the public LB — was the
+   compass for every robustness decision, mirroring the announced private-test
+   design (unseen countries + print-and-capture).
 
-## Layout
+## Repository layout
 
 ```
-freuid/            # package: config (paths/schema), io (loaders), viz (plot style)
-scripts/           # numbered, each runnable via `uv run`
-  00_download.py           # Kaggle download + extract -> data/
-  01_inventory.py          # files, sizes, CSV schemas, submission format
-  02_labels.py             # class balance + fraud rate across strata
-  03_image_stats.py        # dims/aspect/mode/size + corruption check
-  04_sample_grids.py       # per-label / per-doctype montages
-  05_duplicates_leakage.py # pHash/dHash near-dups + train/test leakage scaffold
-  06_embeddings_gpu.py     # GPU image embeddings (OpenCLIP)
-  07_clustering_umap.py    # UMAP + KMeans/HDBSCAN, separability probes
-  08_build_report.py       # assemble + compile the Typst report
-artifacts/         # small JSON/parquet stats (committed)
-figures/           # PNGs embedded by the report (committed)
-report/            # report.typ + report.pdf
-data/, embeddings/ # git-ignored (live on the box)
+freuid/          core package: data pipeline, transforms, model, metrics
+scripts/         numbered experiment scripts (EDA → training → submission)
+infer.py         standalone inference entrypoint (used by the Docker image)
+docker/          Dockerfile + build instructions (no-network sandbox contract)
+docs/            notes and experiment logs
 ```
 
-## Reproduce
+## Reproducing the final models
 
-Prereqs: [`uv`](https://docs.astral.sh/uv/), and [`typst`](https://typst.app/)
-on `PATH` (for the PDF). Kaggle auth via the standalone token in
-`~/.kaggle/access_token` or the `KAGGLE_API_TOKEN` env var.
+Hardware used: 1× NVIDIA L40S 48 GB, ~3 h total training. Data: official
+competition data only, extracted to `data/extracted/`.
 
 ```bash
-uv sync                      # install dependencies (torch is CUDA cu12x)
-bash scripts/run_eda.sh      # 00 -> 08, end to end
-# or step by step:
-uv run python scripts/00_download.py
-uv run python scripts/01_inventory.py
-# ...
-uv run python scripts/08_build_report.py   # -> report/report.pdf
+# 1) Public specialist (single seed, 3 epochs, no capture-aug, 1024 px)
+python3 scripts/24_train_fusion.py --train-all --no-fusion --loss bce \
+    --img-size 1024 --no-capture-aug --batch-size 12 --workers 10 --epochs 3 --seed 4
+
+# 2) Robust model (3 seeds, 1 epoch, heavy capture-aug, 1024 px)
+for S in a b c; do
+python3 scripts/30_train2.py --train-all \
+    --backbone tf_efficientnetv2_m.in21k_ft_in1k --img-size 1024 --batch-size 12 \
+    --workers 10 --loss bce --aug-strength heavy --epochs 1 --save-name slot2v3_1024_$S
+done
 ```
 
-GPU is auto-detected (`06` uses CUDA when available; verified on an RTX PRO 6000
-Blackwell). Override the encoder with `FREUID_EMB_MODEL` / `FREUID_EMB_PRETRAINED`.
+## Inference
 
-## Notes
+```bash
+python3 infer.py --data-dir /path/to/images --out submission.csv \
+    --checkpoints weights/slot2v3_1024_a.pt,weights/slot2v3_1024_b.pt,weights/slot2v3_1024_c.pt \
+    --batch-size 32 --workers 8
+```
 
-- Everything is schema-introspecting: when the full dataset lands, drop it under
-  `data/` (or re-run `00`) and the same scripts produce the same report at scale.
-- Modelling is intentionally out of scope for this pass.
+Reads a flat directory of images (`.jpeg/.jpg/.png/.webp/.bmp/.tif/.tiff`),
+writes `id,label` CSV (id = filename without extension, label = fraud score).
+Checkpoints are probability-averaged with horizontal-flip TTA.
+
+Final model weights are published as a GitHub Release (see Releases tab).
+
+## Docker (no-network sandbox)
+
+See `docker/README.md`. The image embeds the weights and code; it reads
+`/data/` (read-only) and writes `/submissions/submission.csv`, with
+`--network none`, per the competition reproducibility contract.
+
+## External resources credited
+
+- [timm](https://github.com/huggingface/pytorch-image-models) — ConvNeXtV2 / EfficientNetV2 backbones (Apache-2.0)
+- [PyTorch / torchvision](https://pytorch.org)
+- Explored but **not used** in the final models: IDNet-2025 (CC-BY-4.0),
+  FantasyID, InsightFace `inswapper`, SDXL-inpainting (all documented in the report)
+
+## License
+
+MIT — see [LICENSE](LICENSE).

@@ -48,7 +48,10 @@ def main() -> None:
             check=True,
         )
 
-    if config.LABELS_CSV.exists():
+    if any(
+        (config.EXTRACTED_DIR / name).exists()
+        for name in ("train_labels.csv", "train_sample_labels.csv")
+    ):
         print(f"[skip] already extracted -> {config.EXTRACTED_DIR}")
     else:
         print(f"[extract] {zip_path.name} -> {config.EXTRACTED_DIR}")

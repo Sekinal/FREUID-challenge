@@ -75,6 +75,23 @@ def load_sample_submission() -> pd.DataFrame:
     return pd.read_csv(config.SAMPLE_SUBMISSION_CSV)
 
 
+def attach_image_paths(df: pd.DataFrame) -> pd.DataFrame:
+    """Add ``abs_path`` / ``path_exists`` columns by scanning ``IMAGES_DIR``."""
+    out = df.copy()
+    idx = image_index()
+    out["abs_path"] = out[config.ID_COL].astype(str).map(
+        lambda i: str(idx[i]) if i in idx else pd.NA
+    )
+    out["path_exists"] = out["abs_path"].notna()
+    return out
+
+
+def filter_with_images(df: pd.DataFrame) -> pd.DataFrame:
+    """Keep only rows whose image id resolves on disk."""
+    out = attach_image_paths(df)
+    return out[out["path_exists"]].reset_index(drop=True)
+
+
 # --------------------------------------------------------------------------
 # Artifact helpers
 # --------------------------------------------------------------------------
