@@ -26,6 +26,10 @@ import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 
+# Small /dev/shm inside sandboxed containers breaks the default worker
+# sharing strategy; file_system avoids any shm dependency.
+torch.multiprocessing.set_sharing_strategy("file_system")
+
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 EXTS = {".jpeg", ".jpg", ".png", ".webp", ".bmp", ".tif", ".tiff"}

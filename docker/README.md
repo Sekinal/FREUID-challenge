@@ -20,7 +20,7 @@ docker build -t freuid2026-eliastsj -f docker/Dockerfile .
 ## Run (sandbox)
 
 ```bash
-docker run --rm --network none --gpus all \
+docker run --rm --network none --gpus all --shm-size 2g \
   -v /path/to/test_images:/data:ro \
   -v /path/to/output:/submissions \
   freuid2026-eliastsj
@@ -30,7 +30,7 @@ Default produces the **robust ensemble** submission (primary). To produce the
 public-specialist submission instead:
 
 ```bash
-docker run --rm --network none --gpus all \
+docker run --rm --network none --gpus all --shm-size 2g \
   -e FREUID_MODEL=public \
   -v /path/to/test_images:/data:ro -v /path/to/output:/submissions \
   freuid2026-eliastsj
