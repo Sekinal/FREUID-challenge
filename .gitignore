@@ -30,20 +30,9 @@ submissions/
 # ---- OS / editor ----
 .DS_Store
 
-# transient validation smoke output (random scorer)
-artifacts/validation_smoke.json
+# ---- Docker build context weights (from GitHub Release; never committed) ----
+docker/weights/
 
-# full near-dup pairs are large + regenerable (scripts/05); keep only the summary
-artifacts/duplicates.json
-
-# forensic feature matrix (large, regenerable via scripts/14)
-artifacts/forensic_features.npz
-
-# spectral mean-spectra (regenerable via scripts/17)
-artifacts/spectral_means.npz
-
-# CLIP frozen features (large, regenerable via scripts/19)
-artifacts/clip_features.npz
-
-# fusion feature cache (large, regenerable via scripts/24)
-artifacts/fusion_features.npz
+# ---- Editor/infra local (contiene coordenadas de servidores) ----
+.cursor/
+docs/SERVER.md

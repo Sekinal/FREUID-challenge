@@ -43,6 +43,9 @@ def parse_args():
     p.add_argument("--no-fusion", action="store_true", help="ablation: backbone only")
     p.add_argument("--loss", default="focal", choices=["focal", "bce"])
     p.add_argument("--aug-strength", default="default", choices=["default", "heavy"])
+    p.add_argument("--no-capture-aug", action="store_true", help="disable capture-sim aug (benchmax: keep fragile digital artifact)")
+    p.add_argument("--extra-csv", default="", help="extra labeled frame: id,label,abs_path")
+    p.add_argument("--seed", type=int, default=-1, help=">=0 seeds init for ensemble diversity")
     p.add_argument("--workers", type=int, default=12)
     p.add_argument("--feat-batch", type=int, default=128)
     p.add_argument("--smoke", action="store_true")
@@ -83,6 +86,9 @@ def resolve(frame):
 
 def main():
     args = parse_args()
+    if args.seed >= 0:
+        import torch as _t, numpy as _np, random as _r
+        _t.manual_seed(args.seed); _np.random.seed(args.seed); _r.seed(args.seed)
     pipe = validation.ValidationPipeline(rebuild=args.rebuild_splits)
     train, val, test = resolve(pipe.train), resolve(pipe.val), resolve(pipe.test)
 
@@ -125,6 +131,12 @@ def main():
         train = pd.concat([train, aux], ignore_index=True)
         print(f"[aux] mixed in {len(aux):,} digital IDNet rows -> train={len(train):,}")
 
+    if args.extra_csv:
+        ex = pd.read_csv(args.extra_csv)
+        ex = ex[ex["abs_path"].map(lambda q: Path(str(q)).exists())].reset_index(drop=True)
+        train = pd.concat([train, ex[train.columns.intersection(ex.columns)]], ignore_index=True)
+        print(f"[extra] +{len(ex):,} rows from {args.extra_csv} -> train={len(train):,}")
+
     # real print-captured scanned IDNet -> directly teaches the capture distribution.
     # Reserve the shuffled TAIL (matches scripts/26 --eval-scanned) as a clean val proxy.
     if args.scanned_aux:
@@ -154,11 +166,13 @@ def main():
     cfg = fusion.FusionConfig(backbone=args.backbone, img_size=args.img_size,
                               epochs=args.epochs, batch_size=args.batch_size,
                               use_fusion=not args.no_fusion, loss_type=args.loss,
-                              aug_strength=args.aug_strength, num_workers=args.workers)
+                              aug_strength=args.aug_strength, num_workers=args.workers,
+                              capture_aug=not args.no_capture_aug)
     tag = ("nofusion" if args.no_fusion else "fusion") + (
         f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type
         else ("_all" if args.train_all else "")) + ("_scanned" if args.scanned_aux else "") + (
         "_heavy" if args.aug_strength == "heavy" else "")
+    tag += ("_noaug" if args.no_capture_aug else "") + (f"_s{args.seed}" if args.seed >= 0 else "") + ("_pl" if args.extra_csv else "")
     # val first -> checkpoint selection uses val AuDET (never peeks at any held-out test)
     eval_sets = {"val": (val, val_feats)}
     if test is not None:
