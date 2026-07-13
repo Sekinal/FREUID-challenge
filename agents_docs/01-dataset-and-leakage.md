@@ -43,3 +43,29 @@ CV partition or validation leaks. Also reveals train↔test leakage.
    training image, so a model that memorizes them scores well there. Don't over-trust it.
 3. The full `artifacts/duplicates.json` (~2 MB, all pairs) is **git-ignored** (regenerable via
    `scripts/05`); `artifacts/duplicates_summary.json` keeps the counts + examples.
+
+## Cheap-leak probes — ALL NEGATIVE (2026-07-01)
+
+Direct empirical checks (on the box, train vs public_test) that the public
+leaderboard is **not** trivially winnable. Every cheap explanation for the
+top-of-LB 0.0005 scores is dead:
+
+- **Container / metadata:** genuine and fraud share the *same* JPEG quantization
+  table (md5 `36670c99dd`), identical dimensions, same `APP0+APP1` marker shell,
+  stripped EXIF, baseline (non-progressive). `public_test` is byte-format
+  identical to `train`. → no container leak, and public_test is **not** "captured"
+  at the container level.
+- **Retrieval:** nearest-train-neighbor (256-bit pHash) label agreement ≈ **0.70**
+  — the genuine↔tampered twins are pHash-near-identical but oppositely labeled,
+  so "copy the neighbor's label" is barely above base rate. Only ~**7%** of
+  public_test has a train twin within Hamming 10 (median NN distance 19). kNN
+  label-copy is useless.
+- **id ordering:** `corr(int(id[:8],16), label) = +0.003` — ids are not generated
+  in fraud/genuine blocks.
+- **JPEG marker structure:** uniform (`APP0+APP1`, baseline, no comment segment)
+  across genuine / fraud / public.
+
+**Conclusion:** the organizers scrubbed the trivial leaks. The 0.0005 top scores
+are a *real* pixel-level manipulation artifact extracted well, not a cheat. See
+`agents_docs/04` for the (rejected) OCR-semantic follow-up and the forgery-method
+teardown.

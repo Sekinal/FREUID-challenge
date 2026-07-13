@@ -1,0 +1,11 @@
+{
+  "checkpoint": "runs/fusion_nofusion_all.pt",
+  "use_fusion": false,
+  "clean_freuid": 2.4182542951445285e-06,
+  "degraded_freuid": 0.006973873988859514,
+  "degrade": {
+    "jpeg": 12,
+    "scale": 0.3,
+    "blur": 3.0
+  }
+}

@@ -347,3 +347,152 @@ Surveyed 2024-2025 generalizable-forgery-detection papers and tested the cheapes
 .venv/bin/python scripts/13_leave_one_type_out.py      # OOD: 5 retrains
 .venv/bin/python tests/test_metrics.py && .venv/bin/python tests/test_dedup.py && .venv/bin/python tests/test_splits.py
 ```
+
+---
+
+## Forgery-method teardown (visual, 2026-07-01)
+
+Pulled genuine/fraud twin pairs (same template, opposite label) across all 5
+types and inspected + ran ELA/noise crops. Findings:
+
+- The data are **fully-synthetic template documents** (SIDTD / FantasyID family).
+  Genuine = clean render; fraud = **localized field replacement** (inpaint /
+  crop-replace) of one or more personal-data fields.
+- Visible-by-eye candidate tells: Mozambique fraud DOB in a different font than
+  the template; Egypt fraud Latin date vs Arabic-Indic counterpart disagreeing;
+  Mauritius fraud garbled name diacritics ("Röberts Grïffïths Smîth").
+- **These turned out to be anecdotes** — see the OCR experiment below, which
+  refutes all three at scale.
+
+## OCR semantic-consistency stream — BUILT, TESTED, REJECTED (2026-07-01)
+
+**Hypothesis:** if the forgery leaves *semantic* inconsistencies (cross-script
+date disagreement, chronology violations, anomalous name rendering), an OCR pass
+could catch them and — being semantic, not pixel — **generalize to unseen types**
+(the private-set bet), unlike fragile digital artifacts.
+
+**Build:** PaddleOCR 3.7.0 (PP-OCRv6 latin + `arabic_PP-OCRv5` recognition, HPI /
+Paddle-Inference GPU) in an isolated `/root/ocr-venv`. OCR (Latin + Arabic pass,
+Arabic-script-filtered) → 24 features in `freuid/consistency.py` (cross-script
+year mismatch, chronology/age logic, name-diacritic anomalies, OCR-confidence
+stats, text-box geometry). 2,500 imgs (250/type/label). Model: HistGBM.
+Eval `scripts/consistency_eval.py` (uses `freuid.metrics.freuid_score`):
+
+| Eval | AUC | FREUID |
+|---|---|---|
+| in-distribution 5-fold | 0.72 | 0.77 |
+| **leave-one-type-out (OOD)** | 0.46–0.60 | **0.978** |
+
+→ **No generalization** (LOTO ≈ ConvNeXt-no-aux 0.98). The *semantic* features
+carried ≈ zero weight; only `min_conf` / box-geometry gave the weak in-dist AUC.
+
+**Diagnostic (mean feature by type,label) — the hypothesis is FALSE:**
+- cross-script mismatch: Egypt genuine **0.924** vs fraud **0.904** (≈ equal;
+  genuine mismatches *slightly more*).
+- name weird-accents: Mauritius genuine **4.62** vs fraud **4.52** (≈ equal → a
+  template-generator quirk present in genuine docs too, not a forgery tell).
+- chronology / implausible-age (from *reliable* Latin dates): Δ ≈ 0, sign
+  inconsistent across countries.
+
+**Conclusion:** the forger produces **semantically valid** documents — plausible
+dates, consistent cross-fields, same diacritic quirks as genuine. There is no
+cheap semantic contradiction; the visual "tells" were confirmation bias on 3
+cherry-picked twins. The real fraud signal is a **pixel-level localized artifact**
+(inpainting / font-edge residue) that a CNN separates in-distribution but that is
+template-specific and does not transfer. **Do NOT revisit OCR-semantic detection.**
+
+Artifacts/code: `artifacts/consistency/{features.csv,ocr_raw.jsonl}`,
+`freuid/consistency.py`, `scripts/ocr_build.py`, `scripts/consistency_eval.py`.
+Tooling: `/root/ocr-venv` (PaddleOCR 3.7.0 + paddlepaddle-gpu 3.1.0 + HPI).
+
+**Add to the "where the lever is" synthesis table:**
+
+| OCR semantic-consistency (cross-script / chrono / diacritics) | in-dist AUC 0.72 | LOTO FREUID **0.978** (chance) | forger keeps docs semantically valid — no OCR shortcut |
+
+---
+
+## Benchmax result + two-slot portfolio pivot (2026-07-01)
+
+**Public-LB result (validated by submission):**
+
+| Submission | Public FREUID |
+|---|---|
+| **benchmax single-seed s1** | **0.12267** ← new best |
+| benchmax 3-seed ensemble | 0.12399 |
+| prior 768 (with capture-aug) | 0.15542 |
+| prior overall best | 0.18695 |
+
+Config: all-5 types, **no capture-aug**, no aux, plain BCE, res-768, EffNetV2-M,
+896px decode cache, channels_last, flip-TTA. Code: `scripts/run_benchmax.sh`,
+`scripts/24_train_fusion.py --no-capture-aug --seed`.
+
+**Findings:**
+- **Capture-aug was sabotaging the public LB.** Removing it (keeping the fragile
+  digital inpainting artifact) is the whole win: 0.187 → 0.123 (~34%). Confirms
+  the ablation ladder — the public/in-distribution artifact is high-frequency and
+  aug destroys it.
+- **Ensemble-of-clones does NOT help** (0.124 vs 0.123). All seeds overfit to
+  near-perfect in-dist (val FREUID ~1e-7) → near-identical, low-diversity models;
+  averaging regresses the APCER@1%BPCER operating point. Use the best single seed.
+- **No non-invasive training speedup exists for EffNetV2** (measured): torch.compile
+  a wash (71 vs 70 img/s), fp8/int4 target compute-bound GEMMs but MBConv/depthwise
+  convs are *bandwidth-bound* (~3% MFU at 99% util). Unsloth is LLM/VLM-only. The
+  real speedups (896px cache to fix decode-bound loading, channels_last) are already in.
+
+**Strategy pivot — two final slots (confirmed available):**
+- **Slot 1 = benchmax (DONE, 0.12267).** Public-LB is only ~5% of test and is
+  discarded for final ranking; do not over-invest. Twin-override is the only cheap
+  remaining public lever (~20 min, mechanical) and is optional.
+- **Slot 2 = robustness-maxxed (IN PROGRESS).** Private set = 2 unseen doc types +
+  captured emphasis, i.e. built to kill the benchmax model. Only lever that ever
+  moved OOD is **external-data diversity** (30k IDNet gave 3×: 0.98 → 0.356 LOTO).
+  Robust-val run: Mauritius-LOTO (doubles as the captured proxy — 18/20 captured
+  images are Mauritius) with **60k IDNet (5 countries) + 14.8k synth/FantasyID**,
+  heavy aug, EffNetV2-M@384. `scripts/run_robustval.sh`.
+
+**New assets on the box:** `scripts/build_cache.py` (896px cache builder, ~12 GB at
+`data/cache896`), `scripts/eval_canary.py` (20 captured-image tripwire; valid only
+on holdout models — a --train-all model memorises them), `artifacts/extra_diverse.csv`,
+`/root/ocr-venv` (PaddleOCR 3.7 + PP-OCRv6 + HPI, unused after OCR-consistency was
+rejected).
+
+---
+
+## Slot-2 robustness investigation — the captured axis is a data wall (2026-07-01)
+
+Built the 20-captured-image **canary** (`scripts/eval_canary.py`) — the only
+in-domain captured FREUID images (18/20 Mauritius). Ran two Mauritius-LOTO
+robust models (diverse external data, heavy aug, EffNetV2-M@384):
+
+| Run | Data added | Digital LOTO-test FREUID | **Captured canary separation** | Tripwire |
+|---|---|---|---|---|
+| v1 | 60k IDNet (5 countries) + 14.8k synth/FantasyID | 0.0002 | **+0.191** | PASS |
+| v2 | v1 + 100k incl. **scanned/captured IDNet** | 0.0000 | **+0.088** | **FAIL** |
+
+**Findings:**
+- **Unseen document TYPE is solved, and it's not the real problem.** The
+  manipulation artifact is generator-specific, not type-specific — a model
+  trained on 4 types nails the held-out 5th (digital LOTO ≈ 0.0002). Diverse
+  digital data makes this trivial. The digital LOTO number is a mirage w.r.t.
+  the private set.
+- **The CAPTURED axis is the actual blocker.** Both models false-positive
+  captured *genuine* documents (score them as fraud), even ones in the training
+  set — 4-6 captured-genuine examples in 125k are completely drowned. FREUID's
+  APCER@1%BPCER is dominated by this FP side, so it's fatal.
+- **Scanned/captured IDNet makes it WORSE** (v2 +0.088 < v1 +0.191). Scanned
+  IDNet is 67% fraud-labeled (59k fraud / 28k genuine), so "captured appearance"
+  correlates with the fraud label there — it teaches "captured = fraud" and
+  reinforces the FP bias. Confirms the earlier note that captured IDNet hurts.
+- **Root cause: ~6 captured-genuine FREUID images exist.** No source of
+  captured-genuine signal that isn't outnumbered by captured-fraud. Heavy aug
+  (simulated capture) does not substitute for the real print-and-capture
+  distribution. **The captured axis is unsolvable with available data.**
+
+**Decision:** Slot 2 = **v1 recipe** (diverse *digital* IDNet + synth, heavy aug,
+NO scanned), scaled to train-all @768 (`scripts/run_slot2.sh` ->
+`runs/slot2_robust_all768.pt`). Wins the unseen-type axis, least-bad on captured.
+Do NOT submit it to the public LB now (heavy-aug -> poor public score,
+uninformative; it's a private-set hedge to select when private images release).
+
+**Portfolio:** slot 1 = benchmax (public 0.12267), slot 2 = robust train-all@768.
+Canary is the tripwire before spending either final-submission slot.

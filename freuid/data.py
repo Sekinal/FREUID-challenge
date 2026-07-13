@@ -126,6 +126,21 @@ def build_transforms(cfg: DataConfig) -> T.Compose:
     ])
 
 
+
+# Optional pre-resized image cache (env FREUID_IMG_CACHE) -> big decode speedup.
+import os as _os
+_IMG_CACHE = _os.environ.get("FREUID_IMG_CACHE")
+
+
+def cached_path(path) -> str:
+    """Return the cached JPEG for this id if the cache is enabled and present."""
+    if _IMG_CACHE:
+        c = _os.path.join(_IMG_CACHE, Path(str(path)).stem + ".jpg")
+        if _os.path.exists(c):
+            return c
+    return str(path)
+
+
 class DocumentDataset(Dataset):
     """Labeled document images referenced by ``abs_path`` in the frame."""
 
@@ -149,7 +164,7 @@ class DocumentDataset(Dataset):
 
     def __getitem__(self, idx: int):
         row = self.frame.iloc[idx]
-        path = Path(str(row[self.path_col]))
+        path = Path(cached_path(row[self.path_col]))
         image = Image.open(path).convert("RGB")
         image = self.transform(image)
         if config.LABEL_COL in self.frame.columns:
