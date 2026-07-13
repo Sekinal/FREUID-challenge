@@ -92,6 +92,28 @@ See `docker/README.md`. The image embeds the weights and code; it reads
 - Explored but **not used** in the final models: IDNet-2025 (CC-BY-4.0),
   FantasyID, InsightFace `inswapper`, SDXL-inpainting (all documented in the report)
 
+## Code-freeze compliance
+
+Timeline anchors (all organizer-verifiable):
+
+- **Final model weights frozen 2026-07-08 17:12 UTC** — the `final-models`
+  GitHub Release asset timestamps.
+- **Selected final submissions produced 2026-07-07 / 2026-07-08** (Kaggle
+  submission timestamps) — five days before the private test release.
+- **Last change to model / training / inference code: commit `19630e2`,
+  pushed 2026-07-12 03:07 UTC** — before the private test release
+  (2026-07-13 07:02 UTC).
+
+Commits after the private test release only add documentation, result
+artifacts, and archival copies of pre-freeze experiment launcher scripts
+(`scripts/experiments/`, runs corroborated by Kaggle submission timestamps).
+Verify with one command — no solution code changed after `19630e2`:
+
+```bash
+git diff 19630e2 HEAD --stat -- freuid/ infer.py docker/Dockerfile \
+  docker/entrypoint.sh 'scripts/*.py' 'scripts/*.sh'   # additions only, 0 modifications
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
