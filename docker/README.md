@@ -47,8 +47,8 @@ section). `FREUID_BATCH` / `FREUID_WORKERS` can be tuned if needed.
 
 | Kaggle final pick | Command | Submitted-file sha256 |
 |---|---|---|
-| `sub_bm1024` (public specialist) | `docker run --rm --network none --gpus all --shm-size 2g -e FREUID_MODEL=public -v <test>:/data:ro -v <out>:/submissions freuid2026-eliastsj` | *(added after private-test inference, July 13)* |
-| `sub_slot2v3_1024_ens3` (robust ensemble) | same, with `-e FREUID_MODEL=robust` (default) | *(added after private-test inference, July 13)* |
+| `FINAL_public_bm1024.csv` (public specialist, submitted 2026-07-13 18:50:38 UTC) | `docker run --rm --network none --gpus all --shm-size 2g -e FREUID_MODEL=public -v <test>:/data:ro -v <out>:/submissions freuid2026-eliastsj` | `5f83120d681bcfa555b3c8604aa23fe77ef4c776c4968ef94966a3207536ddb6` |
+| `FINAL_robust_slot2v3.csv` (robust ensemble, submitted 2026-07-13 18:50:40 UTC) | same, with `-e FREUID_MODEL=robust` (default) | `05d694281f17f8cfc9383534540cafbfbbe802d40bbe645c80727a9544abd28a` |
 
 Weights are frozen as of the `final-models` release; the flag is inference
 orchestration only (allowed under the code-freeze rules).
