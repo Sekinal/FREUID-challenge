@@ -30,8 +30,8 @@ submissions/
 # ---- OS / editor ----
 .DS_Store
 
-# transient validation smoke output (random scorer)
-artifacts/validation_smoke.json
+# ---- Docker build context weights (from GitHub Release; never committed) ----
+docker/weights/
 
 # full near-dup pairs are large + regenerable (scripts/05); keep only the summary
 artifacts/duplicates.json
@@ -52,7 +52,6 @@ artifacts/fusion_features.npz
 *.log
 logs/
 models_synth/
-docker/weights/
 # pseudo-label / synth / extra-data manifests: absolute box paths, regenerable
 artifacts/pseudo*.csv
 artifacts/soft_pseudo.csv
@@ -61,3 +60,7 @@ artifacts/synth_*.csv
 artifacts/fantasyid.csv
 # raw OCR dump (large, regenerable via scripts/ocr_build.py)
 artifacts/consistency/ocr_raw.jsonl
+
+# ---- Editor/infra local (contiene coordenadas de servidores) ----
+.cursor/
+docs/SERVER.md
