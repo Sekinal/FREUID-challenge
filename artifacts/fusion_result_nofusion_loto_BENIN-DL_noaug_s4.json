@@ -1,0 +1,20 @@
+{
+  "best": {
+    "epoch": 0,
+    "audet": 0.00016562703347730272,
+    "metrics": {
+      "val": {
+        "freuid": 8.282037538520637e-05,
+        "audet": 0.00016562703347730272,
+        "apcer_at_1pct_bpcer": 0.0
+      },
+      "test": {
+        "freuid": 0.1294945910791495,
+        "audet": 0.060953225202289366,
+        "apcer_at_1pct_bpcer": 0.18871087928464977
+      }
+    }
+  },
+  "use_fusion": false,
+  "tag": "nofusion_loto_BENIN-DL_noaug_s4"
+}

@@ -1,0 +1,20 @@
+{
+  "best": {
+    "epoch": 2,
+    "audet": 3.258509802004798e-07,
+    "metrics": {
+      "val": {
+        "freuid": 1.629255166335497e-07,
+        "audet": 3.258509802004798e-07,
+        "apcer_at_1pct_bpcer": 0.0
+      },
+      "test": {
+        "freuid": 0.033048920677157256,
+        "audet": 0.01209546560222105,
+        "apcer_at_1pct_bpcer": 0.053131991051454136
+      }
+    }
+  },
+  "use_fusion": false,
+  "tag": "nofusion_loto_MOZAMBIQUE-DL_noaug_s4"
+}

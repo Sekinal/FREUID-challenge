@@ -1,0 +1,20 @@
+{
+  "best": {
+    "epoch": 0,
+    "audet": 0.00017056511197136197,
+    "metrics": {
+      "val": {
+        "freuid": 8.528982972044741e-05,
+        "audet": 0.00017056511197136197,
+        "apcer_at_1pct_bpcer": 0.0
+      },
+      "test": {
+        "freuid": 0.000392418832060315,
+        "audet": 3.831831221299153e-05,
+        "apcer_at_1pct_bpcer": 0.0007462686567164179
+      }
+    }
+  },
+  "use_fusion": true,
+  "tag": "fusion_loto_MAURITIUS-ID"
+}

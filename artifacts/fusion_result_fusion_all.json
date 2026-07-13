@@ -1,0 +1,15 @@
+{
+  "best": {
+    "epoch": 2,
+    "audet": 2.6231847561487452e-06,
+    "metrics": {
+      "val": {
+        "freuid": 1.311594098440949e-06,
+        "audet": 2.6231847561487452e-06,
+        "apcer_at_1pct_bpcer": 0.0
+      }
+    }
+  },
+  "use_fusion": true,
+  "tag": "fusion_all"
+}

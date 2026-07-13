@@ -47,3 +47,17 @@ artifacts/clip_features.npz
 
 # fusion feature cache (large, regenerable via scripts/24)
 artifacts/fusion_features.npz
+
+# ---- experiment logs & box-local regenerables ----
+*.log
+logs/
+models_synth/
+docker/weights/
+# pseudo-label / synth / extra-data manifests: absolute box paths, regenerable
+artifacts/pseudo*.csv
+artifacts/soft_pseudo.csv
+artifacts/extra_*.csv
+artifacts/synth_*.csv
+artifacts/fantasyid.csv
+# raw OCR dump (large, regenerable via scripts/ocr_build.py)
+artifacts/consistency/ocr_raw.jsonl

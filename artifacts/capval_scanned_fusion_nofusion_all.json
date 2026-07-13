@@ -1,0 +1,7 @@
+{
+  "checkpoint": "runs/fusion_nofusion_all.pt",
+  "use_fusion": false,
+  "scanned_freuid": 0.9843211646501269,
+  "scanned_audet": 0.5146797512570686,
+  "n": 6000
+}
