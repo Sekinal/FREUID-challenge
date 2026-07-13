@@ -3,8 +3,8 @@
 Fill the official REPLY_TEMPLATE.txt from
 https://freuid2026.microblink.com/reproducibility.html with:
 
-- **Team name**: <team name as on Kaggle leaderboard>
-- **Kaggle usernames**: EliasTSJ, Sekinal
+- **Team name**: The Ego and the ID
+- **Kaggle usernames**: thermostatic (captain), eliasts
 - **Repository URL**: https://github.com/Sekinal/FREUID-challenge
 - **Frozen commit SHA**: <git rev-parse origin/main on July 13, after final CSVs>
 - **Technical report**: report/technical_report.pdf (in repo at frozen commit)
