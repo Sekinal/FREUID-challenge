@@ -44,6 +44,7 @@ def parse_args():
     p.add_argument("--loss", default="focal", choices=["focal", "bce"])
     p.add_argument("--aug-strength", default="default", choices=["default", "heavy"])
     p.add_argument("--no-capture-aug", action="store_true", help="disable capture-sim aug (benchmax: keep fragile digital artifact)")
+    p.add_argument("--extra-csv", default="", help="extra labeled frame: id,label,abs_path")
     p.add_argument("--seed", type=int, default=-1, help=">=0 seeds init for ensemble diversity")
     p.add_argument("--workers", type=int, default=12)
     p.add_argument("--feat-batch", type=int, default=128)
@@ -130,6 +131,12 @@ def main():
         train = pd.concat([train, aux], ignore_index=True)
         print(f"[aux] mixed in {len(aux):,} digital IDNet rows -> train={len(train):,}")
 
+    if args.extra_csv:
+        ex = pd.read_csv(args.extra_csv)
+        ex = ex[ex["abs_path"].map(lambda q: Path(str(q)).exists())].reset_index(drop=True)
+        train = pd.concat([train, ex[train.columns.intersection(ex.columns)]], ignore_index=True)
+        print(f"[extra] +{len(ex):,} rows from {args.extra_csv} -> train={len(train):,}")
+
     # real print-captured scanned IDNet -> directly teaches the capture distribution.
     # Reserve the shuffled TAIL (matches scripts/26 --eval-scanned) as a clean val proxy.
     if args.scanned_aux:
@@ -165,7 +172,7 @@ def main():
         f"_loto_{args.loto_type.replace('/', '-')}" if args.loto_type
         else ("_all" if args.train_all else "")) + ("_scanned" if args.scanned_aux else "") + (
         "_heavy" if args.aug_strength == "heavy" else "")
-    tag += ("_noaug" if args.no_capture_aug else "") + (f"_s{args.seed}" if args.seed >= 0 else "")
+    tag += ("_noaug" if args.no_capture_aug else "") + (f"_s{args.seed}" if args.seed >= 0 else "") + ("_pl" if args.extra_csv else "")
     # val first -> checkpoint selection uses val AuDET (never peeks at any held-out test)
     eval_sets = {"val": (val, val_feats)}
     if test is not None:
