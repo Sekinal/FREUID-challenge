@@ -45,10 +45,26 @@ section). `FREUID_BATCH` / `FREUID_WORKERS` can be tuned if needed.
 
 ## Final submissions mapping (per host guidance, forum thread 723991)
 
-| Kaggle final pick | Command | Output sha256 |
+| Kaggle final pick | Command | Submitted-file sha256 |
 |---|---|---|
 | `sub_bm1024` (public specialist) | `docker run --rm --network none --gpus all --shm-size 2g -e FREUID_MODEL=public -v <test>:/data:ro -v <out>:/submissions freuid2026-eliastsj` | *(added after private-test inference, July 13)* |
 | `sub_slot2v3_1024_ens3` (robust ensemble) | same, with `-e FREUID_MODEL=robust` (default) | *(added after private-test inference, July 13)* |
 
 Weights are frozen as of the `final-models` release; the flag is inference
 orchestration only (allowed under the code-freeze rules).
+
+## Reproducibility tolerance
+
+The sha256 above identifies the exact file we submitted to Kaggle. A
+re-run of the container reproduces it **numerically, not bitwise**: inference
+uses bf16 autocast with cuDNN autotuning (`cudnn.benchmark`), which is
+non-deterministic across runs and GPU models. Measured on back-to-back
+container runs (same GPU, same inputs): per-image score drift
+max |Δ| ≈ 1.5e-4, mean ≈ 8e-7; with different DataLoader settings or
+hardware, max |Δ| ≈ 1e-3. Score distributions are strongly bimodal, so
+this drift is orders of magnitude below the decision scale and does not
+measurably change the FREUID/AuDET metric.
+
+If the container is launched without `--shm-size 2g`, the entrypoint
+detects the small default `/dev/shm` and falls back to `FREUID_WORKERS=0`
+(slower decode, same outputs) rather than crashing.

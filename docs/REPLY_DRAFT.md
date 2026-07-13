@@ -11,10 +11,13 @@ https://freuid2026.microblink.com/reproducibility.html with:
 - **Final Kaggle submission(s)** (per host guidance, thread 723991 — list both):
   - Pick 1 — FINAL_public_bm1024.csv, <timestamp shown on Kaggle> — reproduced via:
     `docker run --rm --network none --gpus all --shm-size 2g -e FREUID_MODEL=public -v <test>:/data:ro -v <out>:/submissions freuid2026-eliastsj`
-    — output sha256: `<from day13 script>`
+    — submitted-file sha256: `<from day13 script>`
   - Pick 2 — FINAL_robust_slot2v3.csv, <timestamp> — reproduced via:
     same command with `-e FREUID_MODEL=robust` (default)
-    — output sha256: `<from day13 script>`
+    — submitted-file sha256: `<from day13 script>`
+  - Note: re-runs reproduce scores numerically, not bitwise (bf16 + cuDNN
+    autotune; measured per-image drift ≤ ~1e-3, metric-neutral) — see
+    docker/README.md "Reproducibility tolerance".
 - **Confirmation**: the repository at the frozen commit, with the released
   weights (`final-models`) embedded per docker/README.md, reproduces both
   selected final submissions under `--network none`.
